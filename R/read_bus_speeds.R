@@ -89,7 +89,8 @@ centroid_speeds <- uta_on_tdm %>% as.tibble() %>%
   arrange(Label,DIR,centroid_id) %>%
   #before averaging, filter out stops far from tdm network (buffer?)
   mutate(Avgmph_C = mean(Avgmph),
-         Avgmphdwell_C = mean(Avgmphdwell)) %>%
+         Avgmphdwell_C = mean(Avgmphdwell)
+         ) %>%
   filter(!is.na(centroid_id)) %>%
   select(centroid_id,LabelNum,Label,DIR,PkOk,STOP,STOP2,Avgmph_C,Avgmphdwell_C) %>%
   unique()

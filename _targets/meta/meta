@@ -1,0 +1,37 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+.Random.seed|object|fe97af05ec48b2b9|||||||||||||||
+analysis_targets|object|9031f1afb5742803|||||||||||||||
+calc_centroid_speeds|function|f67d15e6c509a632|||||||||||||||
+calc_segment_speeds|function|ba49f75a92a477f0|||||||||||||||
+clean_centroids|function|cb4d28553a39d9c7|||||||||||||||
+clean_uta_points|function|189a67b8446f04f7|||||||||||||||
+data_targets|object|1833cadd912bf013|||||||||||||||
+get_tdm_segments|function|880ce37d07110e9e|||||||||||||||
+get_transit_lines|function|34bd99c9564f163b|||||||||||||||
+get_transit_nodes|function|911c43dccbf8c283|||||||||||||||
+get_uta_points|function|6e1a649b00cdc9d6|||||||||||||||
+make_centroids|function|55729949656200f6|||||||||||||||
+merge_uta_tdm|function|539a90d7429d9ec8|||||||||||||||
+merge_utah_tdm|function|b7648b22dc462521|||||||||||||||
+ok_0_centroid_speeds|stem|6483f18497a251ad|12887ccd3e00f63b|f73246e512a78cf2|1574089844||t19213.5956475489s|38248c917d065f90|37662|rds|local|vector|||0.31|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
+ok_0_segment_speeds|stem|1c0adc66881075d9|1d93221b77242a69|280fc0c5723b60e9|-1427303743||t19213.5956622919s|344d3d0630c3a79a|127117|rds|local|vector|||0.16||
+ok_0_uta_on_tdm|stem|25b56c4913884eb8|adfe74c4a2c3d0c5|5a8fd20000abc610|938786659||t19213.5942649445s|3bac3af514d5bce8|85462|rds|local|vector|||10.38|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
+ok_1_centroid_speeds|stem|21c18333e4d58d75|f3d821d53db8d86c|56c6635721ae94a3|-1979177442||t19213.5956512903s|99bf4d216bb37699|32141|rds|local|vector|||0.25||
+ok_1_segment_speeds|stem|e0831f9f61d20034|94cde47c47f94b76|55cc6ea765cf45db|-130731934||t19213.5956658571s|4830563a2d303d0b|121860|rds|local|vector|||0.16||
+ok_1_uta_on_tdm|stem|87aea77570ee72be|7068d5f5c2a190ff|5a8fd20000abc610|-1096577210||t19213.5943740522s|d6e70c4d11efb556|76069|rds|local|vector|||9.36||
+pk_0_centroid_speeds|stem|dfcbdb9f6b352676|32c9b5d89ee9de5f|a0c942e1de0d8ca4|88503146||t19213.595655203s|e7a66cf6df048446|37943|rds|local|vector|||0.27||
+pk_0_segment_speeds|stem|af463f43d87ec4d6|032dbf83623f0634|7708a6e786decd1f|420405728||t19213.5956698856s|475c77250cd63368|127425|rds|local|vector|||0.16||
+pk_0_uta_on_tdm|stem|b0f8e588bdcc587d|4ea366da98b25b79|5a8fd20000abc610|-89845124||t19213.5944922273s|f26b3195e934d28d|85767|rds|local|vector|||10.04||
+pk_1_centroid_speeds|stem|566feac6688c0968|2e91b4b6e7fc7058|9ff9c60eef154355|-436437410||t19213.5956593058s|370690120e94031f|32759|rds|local|vector|||0.29||
+pk_1_segment_speeds|stem|2c51d5c28784069b|4578d521c9c45234|0441fd3533d6f4c0|-2021703472||t19213.5956726675s|6277d376d208500f|122466|rds|local|vector|||0.14||
+pk_1_uta_on_tdm|stem|a18d064ff0d5958e|f37245beff070471|5a8fd20000abc610|1934116972||t19213.5946041949s|2837d6182baf53e7|77307|rds|local|vector|||9.48||
+tdm_centroids|stem|ae7a224363ecd14e|1e410ada57357e7a|33394312e61ff242|-897478575||t19212.9130921656s|d8741426bcfea2bb|269239|rds|local|vector|||0.14|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
+tdm_centroids_clean|stem|f042a1578cf0366d|872fd3812f50e073|a6fbe2e1b5cce83e|1950467381||t19212.9131055988s|4850d816ee4430da|71982|rds|local|vector|||0||
+tdm_data|stem|a8662edb8c017400|9cfd4d293234adcc|f1126418697add56|1035583359||t19212.8996255745s|ae9e8e949bd8dd47|786525|rds|local|vector|||0.3||
+tdm_segments|stem|5b7e29b2a8bb36dc|9fe27eea2d5f7e48|2b8f92b71316f586|1760314838||t19212.8996195914s|45db983e96dd5d9b|1098068|rds|local|vector|||3.03||
+tdm_transit_lines|stem|27428da889a4ac92|e3199948d66162c9|bda32af197601991|664880761||t19212.9130889171s|4a3a1d575a3e4ac1|298953|rds|local|vector|||0.2||
+tdm_transit_nodes|stem|03daa27cb255256b|4ef8e9b2412d12ff|3f7f2a41f192fa7f|1645333439||t19212.9130969937s|66252f1251701f69|369581|rds|local|vector|||0.27|repeating attributes for all subgeometries for which they may not be constant|
+tdm_uta_conversion|stem|01dd2c3e60b2d076|6389d46f931562d8|8f4965d6a3fde399|395856135||t19212.8995809653s|5a765dd53c650cd9|981|rds|local|vector|||0.24||
+uta_data|stem|afb3695c805dbb3d|3cecdb68568eb582|a3eef35e0a569735|-226716801||t19212.8996321313s|1b07db8c1c654443|223581|rds|local|vector|||0.39||
+uta_points|stem|58e05ed8feeabcd7|e353058fcaa5076f|d1aa27c450c988a7|-1737479036||t19212.9005549154s|61811d317f7de6cb|252097|rds|local|vector|||0.29||
+uta_points_clean|stem|e97947b05f1f97f8|ceff6ef0d3d9a0a8|fbce075e0378498a|2144636873||t19212.9131040436s|9c4b09b3f1904208|188292|rds|local|vector|||0.44||
