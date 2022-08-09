@@ -1,11 +1,13 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-.Random.seed|object|fe97af05ec48b2b9|||||||||||||||
-analysis_targets|object|9031f1afb5742803|||||||||||||||
+.Random.seed|object|1f5305e509dceeb2|||||||||||||||
+analysis_targets|object|43459d7136357214|||||||||||||||
 calc_centroid_speeds|function|f67d15e6c509a632|||||||||||||||
 calc_segment_speeds|function|ba49f75a92a477f0|||||||||||||||
 clean_centroids|function|cb4d28553a39d9c7|||||||||||||||
 clean_uta_points|function|189a67b8446f04f7|||||||||||||||
+close_uta_points|stem|47515a79b8d65c9c|9d032f4437f7d3d7|db802308ab01da22|-2107762045||t19213.9181712637s|ca311625d221ac4b|168352|rds|local|vector|||8.98||
 data_targets|object|1833cadd912bf013|||||||||||||||
+filter_far_uta_stops|function|84e93fc220bab7cd|||||||||||||||
 get_tdm_segments|function|880ce37d07110e9e|||||||||||||||
 get_transit_lines|function|34bd99c9564f163b|||||||||||||||
 get_transit_nodes|function|911c43dccbf8c283|||||||||||||||
@@ -13,18 +15,18 @@ get_uta_points|function|6e1a649b00cdc9d6|||||||||||||||
 make_centroids|function|55729949656200f6|||||||||||||||
 merge_uta_tdm|function|539a90d7429d9ec8|||||||||||||||
 merge_utah_tdm|function|b7648b22dc462521|||||||||||||||
-ok_0_centroid_speeds|stem|6483f18497a251ad|12887ccd3e00f63b|f73246e512a78cf2|1574089844||t19213.5956475489s|38248c917d065f90|37662|rds|local|vector|||0.31|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
-ok_0_segment_speeds|stem|1c0adc66881075d9|1d93221b77242a69|280fc0c5723b60e9|-1427303743||t19213.5956622919s|344d3d0630c3a79a|127117|rds|local|vector|||0.16||
-ok_0_uta_on_tdm|stem|25b56c4913884eb8|adfe74c4a2c3d0c5|5a8fd20000abc610|938786659||t19213.5942649445s|3bac3af514d5bce8|85462|rds|local|vector|||10.38|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
-ok_1_centroid_speeds|stem|21c18333e4d58d75|f3d821d53db8d86c|56c6635721ae94a3|-1979177442||t19213.5956512903s|99bf4d216bb37699|32141|rds|local|vector|||0.25||
-ok_1_segment_speeds|stem|e0831f9f61d20034|94cde47c47f94b76|55cc6ea765cf45db|-130731934||t19213.5956658571s|4830563a2d303d0b|121860|rds|local|vector|||0.16||
-ok_1_uta_on_tdm|stem|87aea77570ee72be|7068d5f5c2a190ff|5a8fd20000abc610|-1096577210||t19213.5943740522s|d6e70c4d11efb556|76069|rds|local|vector|||9.36||
-pk_0_centroid_speeds|stem|dfcbdb9f6b352676|32c9b5d89ee9de5f|a0c942e1de0d8ca4|88503146||t19213.595655203s|e7a66cf6df048446|37943|rds|local|vector|||0.27||
-pk_0_segment_speeds|stem|af463f43d87ec4d6|032dbf83623f0634|7708a6e786decd1f|420405728||t19213.5956698856s|475c77250cd63368|127425|rds|local|vector|||0.16||
-pk_0_uta_on_tdm|stem|b0f8e588bdcc587d|4ea366da98b25b79|5a8fd20000abc610|-89845124||t19213.5944922273s|f26b3195e934d28d|85767|rds|local|vector|||10.04||
-pk_1_centroid_speeds|stem|566feac6688c0968|2e91b4b6e7fc7058|9ff9c60eef154355|-436437410||t19213.5956593058s|370690120e94031f|32759|rds|local|vector|||0.29||
-pk_1_segment_speeds|stem|2c51d5c28784069b|4578d521c9c45234|0441fd3533d6f4c0|-2021703472||t19213.5956726675s|6277d376d208500f|122466|rds|local|vector|||0.14||
-pk_1_uta_on_tdm|stem|a18d064ff0d5958e|f37245beff070471|5a8fd20000abc610|1934116972||t19213.5946041949s|2837d6182baf53e7|77307|rds|local|vector|||9.48||
+ok_0_centroid_speeds|stem|ba836791b846f2d8|12887ccd3e00f63b|76152dae9a3a4310|1574089844||t19213.9186166286s|9b21a72945898e9a|34952|rds|local|vector|||0.19||
+ok_0_segment_speeds|stem|82b53f1c1ef1276f|1d93221b77242a69|f1f56c9c8c8ab982|-1427303743||t19213.9186278916s|40e563224c455cae|124549|rds|local|vector|||0.14||
+ok_0_uta_on_tdm|stem|5a70b706645da94c|6b258dbbf2fcddce|bfc637624266d3ac|938786659||t19213.9182855321s|c2b43203ea462660|77882|rds|local|vector|||9.78|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
+ok_1_centroid_speeds|stem|2773fdd9dca4b432|f3d821d53db8d86c|784a1f1b3e22e86d|-1979177442||t19213.9186192911s|b16b6d1cc6fce6f6|30052|rds|local|vector|||0.16||
+ok_1_segment_speeds|stem|de4eb30ac7befaa0|94cde47c47f94b76|90c58f8bebf84548|-130731934||t19213.9186306192s|07a1976b56dd04b6|119758|rds|local|vector|||0.16||
+ok_1_uta_on_tdm|stem|c6bd95f4b34dc426|4deba49c2e400b97|bfc637624266d3ac|-1096577210||t19213.9183916471s|0eab76950812f1ef|70279|rds|local|vector|||9||
+pk_0_centroid_speeds|stem|a6a618051085c896|32c9b5d89ee9de5f|c4deb7d7c458e1b8|88503146||t19213.9186222576s|21da2704d82d775b|35223|rds|local|vector|||0.18||
+pk_0_segment_speeds|stem|46ebde9864a71b85|032dbf83623f0634|225e8c34b066938d|420405728||t19213.9186336404s|10ee57ff7489a2f5|124817|rds|local|vector|||0.16||
+pk_0_uta_on_tdm|stem|6eb105bfcdca31b0|6eb98dde4485e89e|bfc637624266d3ac|-89845124||t19213.9185053057s|96ece2e3adc788ed|78157|rds|local|vector|||9.63||
+pk_1_centroid_speeds|stem|6a2b154d6c52d658|2e91b4b6e7fc7058|b703fce5b913ac89|-436437410||t19213.9186249939s|5ccab7c6d6f8b5ba|30663|rds|local|vector|||0.16||
+pk_1_segment_speeds|stem|38f3cf257f6e24ca|4578d521c9c45234|6c7b753c281bcec1|-2021703472||t19213.9186377729s|2362a7fa63f98482|120332|rds|local|vector|||0.15||
+pk_1_uta_on_tdm|stem|c44ab3f80b0fc187|b9356f709da22556|bfc637624266d3ac|1934116972||t19213.918612657s|23e712930ad581a8|71008|rds|local|vector|||9.09||
 tdm_centroids|stem|ae7a224363ecd14e|1e410ada57357e7a|33394312e61ff242|-897478575||t19212.9130921656s|d8741426bcfea2bb|269239|rds|local|vector|||0.14|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
 tdm_centroids_clean|stem|f042a1578cf0366d|872fd3812f50e073|a6fbe2e1b5cce83e|1950467381||t19212.9131055988s|4850d816ee4430da|71982|rds|local|vector|||0||
 tdm_data|stem|a8662edb8c017400|9cfd4d293234adcc|f1126418697add56|1035583359||t19212.8996255745s|ae9e8e949bd8dd47|786525|rds|local|vector|||0.3||

@@ -45,6 +45,19 @@ tdm_segment_gis <- tdm_segment_data %>%
   filter(!is.na(A.y)) %>%
   st_as_sf()
 
+# filter down those cleaned uta stops not close to transit lines
+betterstops <- list()
+last_route <- 109
+for(i in 1:last_route){
+  good_stops <- uta_points_clean %>% filter(LabelNum == i)
+  route_buffer_zone <- tdm_segment_gis %>% filter(LabelNum == i) %>%
+    st_segmentize(50) %>% st_buffer(dist = 100, enCapStyle = "ROUND")
+  close_stops <- good_stops %>% st_filter(route_buffer_zone)
+  betterstops[[i]] <- close_stops
+}
+close_uta_stops <- bind_rows(betterstops)
+
+
 # TDM Centroids
 tdm_centroids_full <- tdm_segment_gis %>%
   mutate(midlinep = st_centroid(geometry)) %>%
@@ -73,7 +86,7 @@ periodType = "pk"
 last_route <- 109
 for(i in 1:last_route){
   tdm_centroids_route <- tdm_centroids %>% filter(LabelNum == i)
-  uta_route <- uta_points_clean %>% filter(LabelNum == i, PkOk == periodType)
+  uta_route <- close_uta_stops %>% filter(LabelNum == i, PkOk == periodType)
   joined_sf <- uta_route %>% 
     cbind(tdm_centroids_route[st_nearest_feature(uta_route, tdm_centroids_route),]) %>%
     mutate(dist = ifelse(is.na(LabelNum.1),NA,st_distance(midlinep, geometry, by_element = T))) %>%
@@ -84,18 +97,26 @@ for(i in 1:last_route){
 uta_on_tdm <- bind_rows(routes) %>%
   select(-LabelNum.1,-Label.1)
 
+
+
+
+
 centroid_speeds <- uta_on_tdm %>% as.tibble() %>%
   group_by(Label,DIR,centroid_id) %>%
   arrange(Label,DIR,centroid_id) %>%
-  #before averaging, filter out stops far from tdm network (buffer?)
   mutate(Avgmph_C = mean(Avgmph),
          Avgmphdwell_C = mean(Avgmphdwell)
          ) %>%
   filter(!is.na(centroid_id)) %>%
   select(centroid_id,LabelNum,Label,DIR,PkOk,STOP,STOP2,Avgmph_C,Avgmphdwell_C) %>%
-  unique()
+  unique() 
+
+centroid_speed_summary <- centroid_speeds %>%
+  summarize(STOP1 = list(STOP), STOP2 = list(STOP2))
   
-segment_speeds <- tdm_centroids_full %>%
+
+
+vsegment_speeds <- tdm_centroids_full %>%
   left_join((centroid_speeds %>% filter(DIR == 0)), by = c("centroid_id","LabelNum","Label"))
 
 
@@ -106,8 +127,9 @@ labels <- c("919","M806_EglMtn","O616","S002X","M821_Psn", "BRT3500S", "FD605")
 selected_tdm_lines <- tdm_segment_gis %>% filter(Label %in% labels)
 selected_tdm_nodes <- tdm_point_gis %>% filter(Label %in% labels)
 selected_tdm_centroids <- tdm_centroids %>% filter(Label %in% labels)
-selected_uta_stops <- uta_points %>% filter(Label %in% labels)
+selected_uta_stops <- close_uta_stops %>% filter(Label %in% labels)
 selected_snaps <- uta_on_tdm %>% filter(Label %in% labels)
+selected_buffers <- buffer_zones %>% filter(Label %in% labels)
 
 
 
@@ -125,7 +147,8 @@ mapview(selected_tdm_lines, crs = 26912, zcol = "Label",
           col = brewer.pal(8, "Set1")) +
   mapview(selected_snaps, crs = 26912, zcol = "Label",
           col.regions = brewer.pal(8, "Set1"),
-          col = brewer.pal(8, "Set1"))
+          col = brewer.pal(8, "Set1")) +
+  mapview(selected_buffers)
 
 tdm_segment_gis$geometry
 

@@ -61,6 +61,20 @@ clean_centroids <- function(tdm_centroids){
 
 
 #DATA ANALYSIS ------------------------------------------------------------------------------------#
+filter_far_uta_stops <- function(uta_points_clean,tdm_segment_gis,distance,last_route){
+  betterstops <- list()
+  for(i in 1:last_route){
+    good_stops <- uta_points_clean %>% filter(LabelNum == i)
+    route_buffer_zone <- tdm_segment_gis %>% filter(LabelNum == i) %>%
+      st_segmentize(50) %>% st_buffer(dist = distance, enCapStyle = "ROUND")
+    close_stops <- good_stops %>% st_filter(route_buffer_zone)
+    betterstops[[i]] <- close_stops
+  }
+  
+  close_uta_stops <- bind_rows(betterstops)
+  close_uta_stops
+}
+
 
 merge_uta_tdm <- function(periodType,direction,last_route,uta_points_clean,tdm_centroids){
   routes <- list()

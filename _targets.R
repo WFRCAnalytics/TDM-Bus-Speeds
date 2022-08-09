@@ -38,10 +38,12 @@ data_targets <- tar_plan(
 
 
 analysis_targets <- tar_plan(
-  tar_target(pk_0_uta_on_tdm, merge_uta_tdm("pk",0,109,uta_points_clean,tdm_centroids_clean)),
-  tar_target(pk_1_uta_on_tdm, merge_uta_tdm("pk",1,109,uta_points_clean,tdm_centroids_clean)),
-  tar_target(ok_0_uta_on_tdm, merge_uta_tdm("ok",0,109,uta_points_clean,tdm_centroids_clean)),
-  tar_target(ok_1_uta_on_tdm, merge_uta_tdm("ok",1,109,uta_points_clean,tdm_centroids_clean)),
+  tar_target(close_uta_points, filter_far_uta_stops(uta_points_clean,tdm_transit_lines,150,109)),
+  
+  tar_target(pk_0_uta_on_tdm, merge_uta_tdm("pk",0,109,close_uta_points,tdm_centroids_clean)),
+  tar_target(pk_1_uta_on_tdm, merge_uta_tdm("pk",1,109,close_uta_points,tdm_centroids_clean)),
+  tar_target(ok_0_uta_on_tdm, merge_uta_tdm("ok",0,109,close_uta_points,tdm_centroids_clean)),
+  tar_target(ok_1_uta_on_tdm, merge_uta_tdm("ok",1,109,close_uta_points,tdm_centroids_clean)),
   
   tar_target(pk_0_centroid_speeds, calc_centroid_speeds(pk_0_uta_on_tdm)),
   tar_target(pk_1_centroid_speeds, calc_centroid_speeds(pk_1_uta_on_tdm)),
@@ -61,3 +63,5 @@ tar_plan(
   data_targets,
   analysis_targets
 )
+
+#test <- tar_read(ok_1_segment_speeds)
