@@ -1,0 +1,92 @@
+---
+title: "TDM - UTA Bus Speed Comparison Tool"
+output: html_document
+date: '2022-08-16'
+runtime: shiny
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(targets)
+library(tarchetypes)
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(mapview)
+```
+
+
+```{r,echo=FALSE}
+tdm_uta_conversion <- tar_read(tdm_uta_conversion)
+pk_0_estimated_speeds <- tar_read(pk_0_estimated_speeds)
+ok_0_estimated_speeds <- tar_read(ok_0_estimated_speeds)
+pk_1_estimated_speeds <- tar_read(pk_1_estimated_speeds)
+ok_1_estimated_speeds <- tar_read(ok_1_estimated_speeds)
+```
+
+
+```{r eruptions, echo=FALSE}
+# Copy the line below to make a select box 
+inputPanel(
+  selectInput("Period", label = h3("Select Period"), 
+    choices = list("Peak" = 1, "Off-Peak" = 2), 
+    selected = 1),
+  selectInput("Dir", label = h3("Select Direction"), 
+    choices = list("1" = 1, "0" = 2), 
+    selected = 1),
+  numericInput("label", h3("Select Transit Line"), 11, min = 1, max = 109, step = 1)
+)
+```
+
+
+```{r,echo = FALSE}
+dlabel <- reactive({
+  input$label
+})
+renderText({
+  labelname <- tdm_uta_conversion %>% filter(LabelNum == dlabel())
+  labelname$Label
+})
+dperiod <- reactive({
+  if(input$Period == 1 && input$Dir == 2){
+    return(pk_0_estimated_speeds)
+  }else {
+    if(input$Period == 2 && input$Dir == 2){
+      return(ok_0_estimated_speeds)
+    }else {
+      if(input$Period == 1 && input$Dir == 1){
+        return(pk_1_estimated_speeds)
+      }else{
+        return(ok_1_estimated_speeds)
+      }
+    }
+  }
+})
+
+renderLeaflet({
+  routeMap <- dperiod() %>% filter(LabelNum ==  dlabel()) %>% st_as_sf %>% st_transform(4326)
+  leaflet() %>%
+    addProviderTiles(providers$CartoDB.Positron) %>%
+    addPolylines(
+      data = routeMap$geometry, 
+      weight = routeMap$speedRatio*10,
+      popup = paste("MODE:", routeMap$MODE, "<br>",
+                  "ONEWAY:", routeMap$ONEWAY, "<br>",
+                  "LINKSEQ1:", routeMap$LINKSEQ1, "<br>",
+                  "LINKSEQ2:", routeMap$LINKSEQ2, "<br>",
+                  "P_SPEED1:", routeMap$P_SPEED1, "<br>",
+                  "P_SPEED2:", routeMap$P_SPEED2, "<br>",
+                  "O_SPEED1:", routeMap$O_SPEED1, "<br>",
+                  "O_SPEED2:", routeMap$O_SPEED2, "<br>",
+                  "EstAvgmphdwell", routeMap$EstAvgmphdwell, "<br>",
+                  "speedRatio:", routeMap$speedRatio)
+    )#add color for above/below 1
+    #add legend explaining color
+})
+
+
+```
+
+
+
