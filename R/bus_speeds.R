@@ -54,7 +54,7 @@ clean_uta_points <- function(uta_points){
   
 clean_centroids <- function(tdm_centroids){
   tdm_centroids %>%
-    select(centroid_id,LabelNum,Label,ONEWAY,LINKSEQ1,LINKSEQ2,midlinep)
+    select(centroid_id,link_id,A.x,B.x,MODE,LabelNum,Label,ONEWAY,LINKSEQ1,LINKSEQ2,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,midlinep)
 } 
 
 
@@ -97,17 +97,60 @@ calc_centroid_speeds <- function(uta_on_tdm){
   centroid_speeds <- uta_on_tdm %>% as.tibble() %>%
     group_by(Label,DIR,centroid_id) %>%
     arrange(Label,DIR,centroid_id) %>%
-    #filter out stops far from tdm network (buffer?)
     mutate(Avgmph_C = mean(Avgmph),
            Avgmphdwell_C = mean(Avgmphdwell)) %>%
     filter(!is.na(centroid_id)) %>%
     select(centroid_id,LabelNum,Label,DIR,PkOk,STOP,STOP2,Avgmph_C,Avgmphdwell_C) %>%
     unique()
+  centroid_speeds
 }
 
-calc_segment_speeds <- function(centroids,centroid_speeds){
-  centroids %>%
-    left_join((centroid_speeds), by = c("centroid_id","LabelNum","Label"))
-    #fill in missing values
+calc_centroid_speed_summary <- function(centroid_speeds){
+  centroid_speeds %>%
+    summarize(STOP1 = list(STOP), STOP2 = list(STOP2)) %>%
+    mutate(start = as.numeric(map(STOP1,1)), end = as.numeric(map(STOP2,last))) %>%
+    # determine direction uta bus is traveling relative to table direction (up the table or down the table)
+    mutate(bus_direction = ifelse(start > lead(start),"up","down")) %>%
+    fill(bus_direction) %>%
+    # some routes have no values, so just assum a down direction
+    mutate(bus_direction = ifelse(is.na(bus_direction),"down",bus_direction))
 }
+
+calc_segment_speeds <- function(centroids,centroid_speeds, centroid_speed_summary){
+  centroids %>%
+    left_join((centroid_speeds), by = c("centroid_id","LabelNum","Label")) %>% 
+    distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>%
+    select(-STOP,-STOP2) %>%
+    left_join(centroid_speed_summary, by = c("centroid_id","Label","DIR")) %>%
+    mutate(STOP1 = ifelse(STOP1=="NULL",NA,STOP1), STOP2 = ifelse(STOP2=="NULL",NA,STOP2)) %>%
+    fill(bus_direction) %>%
+    mutate(Avgmph_C_down = Avgmph_C, Avgmph_C_up = Avgmph_C,
+           Avgmphdwell_C_down = Avgmphdwell_C, Avgmphdwell_C_up = Avgmphdwell_C) %>%
+    group_by(LabelNum) %>%
+    fill(Avgmph_C_down, .direction = "down") %>% fill(Avgmph_C_up, .direction = "up") %>%
+    fill(Avgmphdwell_C_down, .direction = "down") %>% fill(Avgmphdwell_C_up, .direction = "up")
+}
+
+estimated_segment_speeds <- function(segment_speeds, tdm_segments){
+  ss <- segment_speeds %>%
+    mutate(EstAvgmph = ifelse(bus_direction == "up",Avgmph_C_up,Avgmph_C_down),
+           EstAvgmphdwell = ifelse(bus_direction == "up",Avgmphdwell_C_up, Avgmphdwell_C_down)) %>%
+    select(-Avgmph_C,-Avgmphdwell_C,-Avgmph_C_down,-Avgmph_C_up, -Avgmphdwell_C_down, -Avgmphdwell_C_up) %>%
+    fill(DIR, PkOk, EstAvgmph, EstAvgmphdwell) %>%
+    mutate(EstAvgmphdwell = ifelse(EstAvgmphdwell == 0, EstAvgmph,EstAvgmphdwell)) %>%
+    select(centroid_id,link_id,A.x,B.x,Label,LabelNum,MODE,ONEWAY,LINKSEQ1,LINKSEQ2,DIR,PkOk,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,EstAvgmphdwell)
+  
+  seg1 <- tdm_segments %>% select(link_id)
+  speed1 <- ss %>% as_tibble() %>% select(-midlinep) %>% 
+    group_by(LabelNum) %>%
+    left_join(seg1) %>% distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>% 
+    st_as_sf()
+  
+  speed1 %>% 
+    mutate(speedRatio = ifelse(PkOk == "pk", P_SPEED1/EstAvgmphdwell, O_SPEED1/EstAvgmphdwell)) %>%
+    mutate(speedColor = ifelse(speedRatio > 1, "red", "blue"))
+  
+}
+
+
 

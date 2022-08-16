@@ -50,18 +50,31 @@ analysis_targets <- tar_plan(
   tar_target(ok_0_centroid_speeds, calc_centroid_speeds(ok_0_uta_on_tdm)),
   tar_target(ok_1_centroid_speeds, calc_centroid_speeds(ok_1_uta_on_tdm)),
   
-  tar_target(pk_0_segment_speeds, calc_segment_speeds(tdm_centroids_clean, pk_0_centroid_speeds)),
-  tar_target(pk_1_segment_speeds, calc_segment_speeds(tdm_centroids_clean, pk_1_centroid_speeds)),
-  tar_target(ok_0_segment_speeds, calc_segment_speeds(tdm_centroids_clean, ok_0_centroid_speeds)),
-  tar_target(ok_1_segment_speeds, calc_segment_speeds(tdm_centroids_clean, ok_1_centroid_speeds))
+  tar_target(pk_0_centroid_speed_summary, calc_centroid_speed_summary(pk_0_centroid_speeds)),
+  tar_target(pk_1_centroid_speeds_summary, calc_centroid_speed_summary(pk_1_centroid_speeds)),
+  tar_target(ok_0_centroid_speeds_summary, calc_centroid_speed_summary(ok_0_centroid_speeds)),
+  tar_target(ok_1_centroid_speeds_summary, calc_centroid_speed_summary(ok_1_centroid_speeds)),
+  
+  tar_target(pk_0_segment_speeds, calc_segment_speeds(tdm_centroids_clean, pk_0_centroid_speeds, pk_0_centroid_speed_summary)),
+  tar_target(pk_1_segment_speeds, calc_segment_speeds(tdm_centroids_clean, pk_1_centroid_speeds, pk_1_centroid_speeds_summary)),
+  tar_target(ok_0_segment_speeds, calc_segment_speeds(tdm_centroids_clean, ok_0_centroid_speeds, ok_0_centroid_speeds_summary)),
+  tar_target(ok_1_segment_speeds, calc_segment_speeds(tdm_centroids_clean, ok_1_centroid_speeds, ok_1_centroid_speeds_summary)),
+  
+  tar_target(pk_0_estimated_speeds, estimated_segment_speeds(pk_0_segment_speeds, tdm_transit_lines)),
+  tar_target(pk_1_estimated_speeds, estimated_segment_speeds(pk_1_segment_speeds, tdm_transit_lines)),
+  tar_target(ok_0_estimated_speeds, estimated_segment_speeds(ok_0_segment_speeds, tdm_transit_lines)),
+  tar_target(ok_1_estimated_speeds, estimated_segment_speeds(ok_1_segment_speeds, tdm_transit_lines))
   
 )
 
+# Still To Do
+#' Filter out or identify those stops that don't connect between centroids
+#' determine which speed matches with which directionality
+#' why are Avgmphdwell speeds 0 sometimes?
+#' Maybe filter out really slow uta speeds?
 
 
 tar_plan(
   data_targets,
   analysis_targets
 )
-
-#test <- tar_read(ok_1_segment_speeds)

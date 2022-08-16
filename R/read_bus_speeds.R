@@ -8,6 +8,7 @@ library(leaflet)
 library(mapview)
 library(RColorBrewer)
 library(rgdal)
+library(zoo)
 
 # Inputs ------------------------------------------------------------------------#
 tdm_uta_conversion <- read_csv("data/TDMtoUTARoute.csv") %>%
@@ -109,20 +110,44 @@ centroid_speeds <- uta_on_tdm %>% as.tibble() %>%
          ) %>%
   filter(!is.na(centroid_id)) %>%
   select(centroid_id,LabelNum,Label,DIR,PkOk,STOP,STOP2,Avgmph_C,Avgmphdwell_C) %>%
-  unique() 
+  unique()
 
 centroid_speed_summary <- centroid_speeds %>%
-  summarize(STOP1 = list(STOP), STOP2 = list(STOP2))
-  
+  summarize(STOP1 = list(STOP), STOP2 = list(STOP2)) %>%
+  mutate(start = as.numeric(map(STOP1,1)), end = as.numeric(map(STOP2,last))) %>%
+  # determine direction uta bus is traveling relative to table direction (up the table or down the table)
+  mutate(bus_direction = ifelse(start > lead(start),"up","down")) %>%
+  fill(bus_direction) %>%
+  # some routes have no values, so just assum a down direction
+  mutate(bus_direction = ifelse(is.na(bus_direction),"down",bus_direction))
 
 
-vsegment_speeds <- tdm_centroids_full %>%
-  left_join((centroid_speeds %>% filter(DIR == 0)), by = c("centroid_id","LabelNum","Label"))
 
+#IDEA for next steps
+#' filter out all non-consecutive / bad stop values
+segment_speeds <- tdm_centroids_full %>%
+  left_join((centroid_speeds %>% filter(DIR == 0)), by = c("centroid_id","LabelNum","Label")) %>% 
+  distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>%
+  select(-STOP,-STOP2) %>%
+  left_join(centroid_speed_summary, by = c("centroid_id","Label","DIR")) %>%
+  mutate(STOP1 = ifelse(STOP1=="NULL",NA,STOP1), STOP2 = ifelse(STOP2=="NULL",NA,STOP2)) %>%
+  fill(bus_direction) %>%
+  mutate(Avgmph_C_down = Avgmph_C, Avgmph_C_up = Avgmph_C,
+         Avgmphdwell_C_down = Avgmphdwell_C, Avgmphdwell_C_up = Avgmphdwell_C) %>%
+  group_by(LabelNum) %>%
+  fill(Avgmph_C_down, .direction = "down") %>% fill(Avgmph_C_up, .direction = "up") %>%
+  fill(Avgmphdwell_C_down, .direction = "down") %>% fill(Avgmphdwell_C_up, .direction = "up")
+
+estimated_segment_speeds <- segment_speeds %>%
+  mutate(EstAvgmph = ifelse(bus_direction == "up",Avgmph_C_up,Avgmph_C_down),
+         EstAvgmphdwell = ifelse(bus_direction == "up",Avgmphdwell_C_up, Avgmphdwell_C_down)) %>%
+  select(-Avgmph_C,-Avgmphdwell_C,-Avgmph_C_down,-Avgmph_C_up, -Avgmphdwell_C_down, -Avgmphdwell_C_up) %>%
+  fill(DIR, PkOk, EstAvgmph, EstAvgmphdwell) %>%
+  select(centroid_id,link_id,A.x,B.x,Label,LabelNum,MODE,ONEWAY,LINKSEQ1,LINKSEQ2,DIR,PkOk,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,EstAvgmphdwell)
 
 
 # MAPVIEW ----------------------------------------------------------------------#
-labels <- c("919","M806_EglMtn","O616","S002X","M821_Psn", "BRT3500S", "FD605")
+labels <- c("919","M806_EglMtn","O616","S002X","M821_Psn", "BRT3500S", "FD605", "M833_CntPr")
 
 selected_tdm_lines <- tdm_segment_gis %>% filter(Label %in% labels)
 selected_tdm_nodes <- tdm_point_gis %>% filter(Label %in% labels)

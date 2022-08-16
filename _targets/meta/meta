@@ -1,12 +1,14 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-.Random.seed|object|1f5305e509dceeb2|||||||||||||||
-analysis_targets|object|43459d7136357214|||||||||||||||
-calc_centroid_speeds|function|f67d15e6c509a632|||||||||||||||
-calc_segment_speeds|function|ba49f75a92a477f0|||||||||||||||
-clean_centroids|function|cb4d28553a39d9c7|||||||||||||||
+.Random.seed|object|a5c484b19b038d42|||||||||||||||
+analysis_targets|object|34f1243751b9f3be|||||||||||||||
+calc_centroid_speed_summary|function|c217d124f91bfe41|||||||||||||||
+calc_centroid_speeds|function|07106f88da308b75|||||||||||||||
+calc_segment_speeds|function|f0bd922b6f971a95|||||||||||||||
+clean_centroids|function|2577755cc7a8b86c|||||||||||||||
 clean_uta_points|function|189a67b8446f04f7|||||||||||||||
 close_uta_points|stem|47515a79b8d65c9c|9d032f4437f7d3d7|db802308ab01da22|-2107762045||t19213.9181712637s|ca311625d221ac4b|168352|rds|local|vector|||8.98||
 data_targets|object|1833cadd912bf013|||||||||||||||
+estimated_segment_speeds|function|6660b72e6f2d65f3|||||||||||||||
 filter_far_uta_stops|function|84e93fc220bab7cd|||||||||||||||
 get_tdm_segments|function|880ce37d07110e9e|||||||||||||||
 get_transit_lines|function|34bd99c9564f163b|||||||||||||||
@@ -15,20 +17,29 @@ get_uta_points|function|6e1a649b00cdc9d6|||||||||||||||
 make_centroids|function|55729949656200f6|||||||||||||||
 merge_uta_tdm|function|539a90d7429d9ec8|||||||||||||||
 merge_utah_tdm|function|b7648b22dc462521|||||||||||||||
-ok_0_centroid_speeds|stem|ba836791b846f2d8|12887ccd3e00f63b|76152dae9a3a4310|1574089844||t19213.9186166286s|9b21a72945898e9a|34952|rds|local|vector|||0.19||
-ok_0_segment_speeds|stem|82b53f1c1ef1276f|1d93221b77242a69|f1f56c9c8c8ab982|-1427303743||t19213.9186278916s|40e563224c455cae|124549|rds|local|vector|||0.14||
-ok_0_uta_on_tdm|stem|5a70b706645da94c|6b258dbbf2fcddce|bfc637624266d3ac|938786659||t19213.9182855321s|c2b43203ea462660|77882|rds|local|vector|||9.78|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
-ok_1_centroid_speeds|stem|2773fdd9dca4b432|f3d821d53db8d86c|784a1f1b3e22e86d|-1979177442||t19213.9186192911s|b16b6d1cc6fce6f6|30052|rds|local|vector|||0.16||
-ok_1_segment_speeds|stem|de4eb30ac7befaa0|94cde47c47f94b76|90c58f8bebf84548|-130731934||t19213.9186306192s|07a1976b56dd04b6|119758|rds|local|vector|||0.16||
-ok_1_uta_on_tdm|stem|c6bd95f4b34dc426|4deba49c2e400b97|bfc637624266d3ac|-1096577210||t19213.9183916471s|0eab76950812f1ef|70279|rds|local|vector|||9||
-pk_0_centroid_speeds|stem|a6a618051085c896|32c9b5d89ee9de5f|c4deb7d7c458e1b8|88503146||t19213.9186222576s|21da2704d82d775b|35223|rds|local|vector|||0.18||
-pk_0_segment_speeds|stem|46ebde9864a71b85|032dbf83623f0634|225e8c34b066938d|420405728||t19213.9186336404s|10ee57ff7489a2f5|124817|rds|local|vector|||0.16||
-pk_0_uta_on_tdm|stem|6eb105bfcdca31b0|6eb98dde4485e89e|bfc637624266d3ac|-89845124||t19213.9185053057s|96ece2e3adc788ed|78157|rds|local|vector|||9.63||
-pk_1_centroid_speeds|stem|6a2b154d6c52d658|2e91b4b6e7fc7058|b703fce5b913ac89|-436437410||t19213.9186249939s|5ccab7c6d6f8b5ba|30663|rds|local|vector|||0.16||
-pk_1_segment_speeds|stem|38f3cf257f6e24ca|4578d521c9c45234|6c7b753c281bcec1|-2021703472||t19213.9186377729s|2362a7fa63f98482|120332|rds|local|vector|||0.15||
-pk_1_uta_on_tdm|stem|c44ab3f80b0fc187|b9356f709da22556|bfc637624266d3ac|1934116972||t19213.918612657s|23e712930ad581a8|71008|rds|local|vector|||9.09||
+ok_0_centroid_speeds|stem|ba836791b846f2d8|12887ccd3e00f63b|064d46ad9a96d0b5|1574089844||t19220.7022307447s|9b21a72945898e9a|34952|rds|local|vector|||0.19||
+ok_0_centroid_speeds_summary|stem|e88eebaf9400d7e9|eb61bf698e0e2029|1615f82982ddd5f5|129298050||t19220.6956789327s|4b83a405d91437d3|20434|rds|local|vector|||0.06||
+ok_0_estimated_speeds|stem|e66df8b73c0e4491|9090d1e1ec74d45f|2134cc9945032c17|1635422933||t19220.9713924216s|fdea71c75854c354|277738|rds|local|vector|||0.27||
+ok_0_segment_speeds|stem|49f032a3032215be|3a425e127ce942ba|ab95d1b6576e2b6a|-1427303743||t19220.7022532537s|c45c5ffa681eddfa|273690|rds|local|vector|||0.66||
+ok_0_uta_on_tdm|stem|f07ea70cac559c4d|6b258dbbf2fcddce|5491fed16a340ea1|938786659||t19220.7020041903s|43fba4bc4f9c3a52|112859|rds|local|vector|||9.64||
+ok_1_centroid_speeds|stem|2773fdd9dca4b432|f3d821d53db8d86c|9d980c48b2e024ab|-1979177442||t19220.7022329034s|b16b6d1cc6fce6f6|30052|rds|local|vector|||0.16||
+ok_1_centroid_speeds_summary|stem|d4745df891923dbe|42316f33d581c020|7c922512f59153da|32621909||t19220.6956805834s|8d5b6ccc695cf418|17299|rds|local|vector|||0.06||
+ok_1_estimated_speeds|stem|45e32e504f10381e|c219e8ca0770279b|0a4f0c1516bd20f1|-1838304263||t19220.9713972005s|a312538d1787042c|271572|rds|local|vector|||0.3||
+ok_1_segment_speeds|stem|386d02b1c0c29c27|179cd7ccbcd9a0c3|12f49b61feffa568|-130731934||t19220.7022621472s|70b4d12244edc720|267373|rds|local|vector|||0.68||
+ok_1_uta_on_tdm|stem|21321b9b46fce888|4deba49c2e400b97|5491fed16a340ea1|-1096577210||t19220.7021100317s|c447de3a31360267|101900|rds|local|vector|||9.01||
+pk_0_centroid_speed_summary|stem|fa32b81d7d4ff39c|43e38fe8a74c9aa0|a7421f94d8216e7b|76430109||t19220.695681611s|371aaa4e54cbdf51|20604|rds|local|vector|||0.06||
+pk_0_centroid_speeds|stem|a6a618051085c896|32c9b5d89ee9de5f|9dc7ba53eabe1e00|88503146||t19220.7022353504s|21da2704d82d775b|35223|rds|local|vector|||0.19||
+pk_0_estimated_speeds|stem|8ce3b6d990db0f4e|6d419911d331b5d8|9a29569a82dad416|-1322894779||t19220.9714032603s|1cb5b903c88ad7e4|278293|rds|local|vector|||0.4||
+pk_0_segment_speeds|stem|3a51f20a98c86207|13cecbfccf9aff10|981945155f2b9db3|420405728||t19220.7022708227s|b651c6e14057c0fc|274170|rds|local|vector|||0.66||
+pk_0_uta_on_tdm|stem|3cb7b46d16443019|6eb98dde4485e89e|5491fed16a340ea1|-89845124||t19220.7022246142s|05bfdbd10ba91841|113331|rds|local|vector|||9.76||
+pk_1_centroid_speeds|stem|6a2b154d6c52d658|2e91b4b6e7fc7058|1b35baec49156745|-436437410||t19220.7022282199s|5ccab7c6d6f8b5ba|30663|rds|local|vector|||0.17||
+pk_1_centroid_speeds_summary|stem|22ec1f91fd0ba883|88efaf9412c0c772|d409f844505a511f|871981736||t19220.6956777557s|a070b63200fdc569|17588|rds|local|vector|||0.06||
+pk_1_estimated_speeds|stem|76c02fda11ee66b7|0f76ab03af1364b2|0c3bc959b8e65f0b|-1277384738||t19220.9713881738s|318a33806ab69213|273554|rds|local|vector|||0.32||
+pk_1_estimatedt_speeds|stem||b5444e9ea4beb5aa|65b056d4fdc1a4e2|-1554813870||t19220.6957194281s||0|rds|local|vector|||0||argument centroid_speeds is missing, with no default
+pk_1_segment_speeds|stem|f1d94d5b0ed40ee1|1bf1210e3754fd78|93425411f27f7962|-2021703472||t19220.702244585s|b73dead7e1206d8a|268261|rds|local|vector|||0.67||
+pk_1_uta_on_tdm|stem|66ad649db5d51e34|b9356f709da22556|5491fed16a340ea1|1934116972||t19220.7018908392s|46fd92d860ef25c6|102944|rds|local|vector|||9.53|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
 tdm_centroids|stem|ae7a224363ecd14e|1e410ada57357e7a|33394312e61ff242|-897478575||t19212.9130921656s|d8741426bcfea2bb|269239|rds|local|vector|||0.14|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.90mThis warning is displayed once every 8 hours.39m90mCall lifecyclelast_lifecycle_warnings to see where this warning was generated.39m|
-tdm_centroids_clean|stem|f042a1578cf0366d|872fd3812f50e073|a6fbe2e1b5cce83e|1950467381||t19212.9131055988s|4850d816ee4430da|71982|rds|local|vector|||0||
+tdm_centroids_clean|stem|f235383fb1a3b349|872fd3812f50e073|a5375b7b59e793dc|1950467381||t19220.7017793961s|a5eca35dbdc65d9c|162018|rds|local|vector|||0.02||
 tdm_data|stem|a8662edb8c017400|9cfd4d293234adcc|f1126418697add56|1035583359||t19212.8996255745s|ae9e8e949bd8dd47|786525|rds|local|vector|||0.3||
 tdm_segments|stem|5b7e29b2a8bb36dc|9fe27eea2d5f7e48|2b8f92b71316f586|1760314838||t19212.8996195914s|45db983e96dd5d9b|1098068|rds|local|vector|||3.03||
 tdm_transit_lines|stem|27428da889a4ac92|e3199948d66162c9|bda32af197601991|664880761||t19212.9130889171s|4a3a1d575a3e4ac1|298953|rds|local|vector|||0.2||
