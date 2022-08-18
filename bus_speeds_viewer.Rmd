@@ -85,8 +85,22 @@ renderLeaflet({
     #add legend explaining color
 })
 
-
+renderPlot({
+  routeMap <- dperiod() %>% filter(LabelNum ==  dlabel()) %>% st_as_sf %>% st_transform(4326)
+  if(input$Period == 1){
+      return(ggplot(routeMap, aes(x = link_id))+
+        geom_col(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = .2) +
+        geom_col(aes(y=P_SPEED1, colour = "Modeled"), alpha = .2) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+        scale_fill_manual(values = c("blue","red")))
+    
+  }
+  if(input$Period == 2){
+      return(ggplot(routeMap, aes(x = link_id))+
+        geom_col(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = .2) +
+        geom_col(aes(y=O_SPEED1, colour = "Modeled"), alpha = .2) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+        scale_fill_manual(values = c("blue","red")))
+  }
+})
 ```
-
-
-
