@@ -23,11 +23,16 @@ pk_0_estimated_speeds <- tar_read(pk_0_estimated_speeds)
 ok_0_estimated_speeds <- tar_read(ok_0_estimated_speeds)
 pk_1_estimated_speeds <- tar_read(pk_1_estimated_speeds)
 ok_1_estimated_speeds <- tar_read(ok_1_estimated_speeds)
+uta_points <- tar_read(uta_points) %>%
+  mutate(period2 = ifelse(grepl("m peak",period),"pk","ok")) %>%
+  st_transform(4326) %>%
+  mutate(lon = sf::st_coordinates(.)[,1],
+         lat = sf::st_coordinates(.)[,2]) %>%
+  as.tibble() %>% select(-geometry)
 ```
 
 
 ```{r eruptions, echo=FALSE}
-# Copy the line below to make a select box 
 inputPanel(
   selectInput("Period", label = h3("Select Period"), 
     choices = list("Peak" = 1, "Off-Peak" = 2), 
@@ -64,10 +69,30 @@ dperiod <- reactive({
   }
 })
 
+finalPeriod <- reactive({
+  if(input$Period == 1){"pk"}
+  else{"ok"}
+})
+finalDir <- reactive({
+  if(input$Dir == 1){1}
+  else{0}
+})
+
 renderLeaflet({
-  routeMap <- dperiod() %>% filter(LabelNum ==  dlabel()) %>% st_as_sf %>% st_transform(4326)
+  routeMap <- dperiod() %>% 
+    filter(LabelNum ==  dlabel()) %>% 
+    st_as_sf %>% st_transform(4326)
+  utaStops <- uta_points %>% 
+    filter(period2 == finalPeriod()) %>% 
+    filter(DIR == finalDir()) %>% 
+    filter(LabelNum == dlabel())
+  
   leaflet() %>%
     addProviderTiles(providers$CartoDB.Positron) %>%
+    addCircleMarkers(lng = utaStops$lon, lat = utaStops$lat,
+      popup = paste("Avgmphdwell",utaStops$Avgmphdwell),
+      color = "red",
+      radius = 6) %>%
     addPolylines(
       data = routeMap$geometry, 
       weight = routeMap$speedRatio*10,
