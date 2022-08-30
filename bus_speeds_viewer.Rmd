@@ -3,11 +3,21 @@ title: "TDM - UTA Bus Speed Comparison Tool"
 output: html_document
 date: '2022-08-16'
 runtime: shiny
+resource_files:
+- _targets.R
+- _targets/objects/uta_map_points
+- _targets/objects/tdm_uta_conversion
+- _targets/objects/pk_0_estimated_speeds
+- _targets/objects/ok_0_estimated_speeds
+- _targets/objects/ok_1_estimated_speeds
+- _targets/objects/pk_1_estimated_speeds
 ---
 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+library(shinydashboard)
 library(targets)
 library(tarchetypes)
 library(tidyverse)
@@ -23,12 +33,9 @@ pk_0_estimated_speeds <- tar_read(pk_0_estimated_speeds)
 ok_0_estimated_speeds <- tar_read(ok_0_estimated_speeds)
 pk_1_estimated_speeds <- tar_read(pk_1_estimated_speeds)
 ok_1_estimated_speeds <- tar_read(ok_1_estimated_speeds)
-uta_points <- tar_read(uta_points) %>%
-  mutate(period2 = ifelse(grepl("m peak",period),"pk","ok")) %>%
-  st_transform(4326) %>%
-  mutate(lon = sf::st_coordinates(.)[,1],
-         lat = sf::st_coordinates(.)[,2]) %>%
-  as.tibble() %>% select(-geometry)
+pk_estimated_speeds <- tar_read(pk_estimated_speeds)
+ok_estimated_speeds <- tar_read(ok_estimated_speeds)
+uta_points <- tar_read(uta_map_points)
 ```
 
 
@@ -38,12 +45,11 @@ inputPanel(
     choices = list("Peak" = 1, "Off-Peak" = 2), 
     selected = 1),
   selectInput("Dir", label = h3("Select Direction"), 
-    choices = list("1" = 1, "0" = 2), 
+    choices = list("1" = 1, "0" = 2, "Average" = 3), 
     selected = 1),
   numericInput("label", h3("Select Transit Line"), 11, min = 1, max = 109, step = 1)
 )
 ```
-
 
 ```{r,echo = FALSE}
 dlabel <- reactive({
@@ -51,8 +57,18 @@ dlabel <- reactive({
 })
 renderText({
   labelname <- tdm_uta_conversion %>% filter(LabelNum == dlabel())
-  labelname$Label
+  paste0("Transit Line: ", labelname$Label)
 })
+```
+
+```{r, echo = FALSE}
+renderText({
+  "*Thickness of transit line based on speed ratio"
+})
+```
+
+
+```{r,echo = FALSE}
 dperiod <- reactive({
   if(input$Period == 1 && input$Dir == 2){
     return(pk_0_estimated_speeds)
@@ -63,7 +79,15 @@ dperiod <- reactive({
       if(input$Period == 1 && input$Dir == 1){
         return(pk_1_estimated_speeds)
       }else{
-        return(ok_1_estimated_speeds)
+        if(input$Period == 2 && input$Dir == 1){
+          return(ok_1_estimated_speeds)
+        }else{
+          if(input$Period == 1 && input$Dir == 3){
+            return(pk_estimated_speeds)
+          }else{
+            return(ok_estimated_speeds)
+          }
+        }
       }
     }
   }
@@ -74,8 +98,9 @@ finalPeriod <- reactive({
   else{"ok"}
 })
 finalDir <- reactive({
-  if(input$Dir == 1){1}
-  else{0}
+  if(input$Dir == 1){return(c(1))}
+  else{if(input$Dir == 2){return(c(0))}
+      else{return(c(0,1))}}
 })
 
 renderLeaflet({
@@ -83,19 +108,23 @@ renderLeaflet({
     filter(LabelNum ==  dlabel()) %>% 
     st_as_sf %>% st_transform(4326)
   utaStops <- uta_points %>% 
-    filter(period2 == finalPeriod()) %>% 
-    filter(DIR == finalDir()) %>% 
+    filter(PkOk == finalPeriod()) %>% 
+    filter(DIR %in% finalDir()) %>% 
     filter(LabelNum == dlabel())
   
   leaflet() %>%
     addProviderTiles(providers$CartoDB.Positron) %>%
     addCircleMarkers(lng = utaStops$lon, lat = utaStops$lat,
-      popup = paste("Avgmphdwell",utaStops$Avgmphdwell),
+      popup = paste("Avgmphdwell: ",utaStops$Avgmphdwell, "<br>",
+                    "STOP1: ", utaStops$STOP, "<br>",
+                    "STOP2: ", utaStops$STOP2),
       color = "red",
-      radius = 6) %>%
+      radius = 8,
+      group = "UTA Stops") %>%
     addPolylines(
       data = routeMap$geometry, 
       weight = routeMap$speedRatio*10,
+      group = "TDM Links",
       popup = paste("MODE:", routeMap$MODE, "<br>",
                   "ONEWAY:", routeMap$ONEWAY, "<br>",
                   "LINKSEQ1:", routeMap$LINKSEQ1, "<br>",
@@ -106,24 +135,31 @@ renderLeaflet({
                   "O_SPEED2:", routeMap$O_SPEED2, "<br>",
                   "EstAvgmphdwell", routeMap$EstAvgmphdwell, "<br>",
                   "speedRatio:", routeMap$speedRatio)
-    )#add color for above/below 1
-    #add legend explaining color
+    ) %>%
+    addLayersControl(
+          overlayGroups =c("TDM Links", "UTA Stops"),
+          options = layersControlOptions(collapsed=FALSE)
+          )
 })
 
 renderPlot({
   routeMap <- dperiod() %>% filter(LabelNum ==  dlabel()) %>% st_as_sf %>% st_transform(4326)
   if(input$Period == 1){
-      return(ggplot(routeMap, aes(x = link_id))+
-        geom_col(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = .2) +
-        geom_col(aes(y=P_SPEED1, colour = "Modeled"), alpha = .2) +
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+      return(ggplot(routeMap, aes(x = LINKSEQ1))+
+        geom_line(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = 1) + 
+        geom_point(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = 1) +
+        geom_line(aes(y=P_SPEED1, colour = "Modeled"), alpha = 1) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +  
+        geom_point(aes(y=P_SPEED1, colour = "Modeled")) +
         scale_fill_manual(values = c("blue","red")))
     
   }
   if(input$Period == 2){
-      return(ggplot(routeMap, aes(x = link_id))+
-        geom_col(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = .2) +
-        geom_col(aes(y=O_SPEED1, colour = "Modeled"), alpha = .2) +
+      return(ggplot(routeMap, aes(x = LINKSEQ1))+
+        geom_line(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = 1) +
+        geom_point(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = 1) +
+        geom_line(aes(y=O_SPEED1, colour = "Modeled"), alpha = 1) +
+        geom_point(aes(y=O_SPEED1, colour = "Modeled"), alpha = 1) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
         scale_fill_manual(values = c("blue","red")))
   }

@@ -1,0 +1,13 @@
+name: bus_speeds_viewer
+title: bus_speeds_viewer
+username:
+account: christopher-day
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6850057
+bundleId: 6252305
+url: https://christopher-day.shinyapps.io/bus_speeds_viewer/
+when: 1661876429.25639
+lastSyncTime: 1661876429.2564
+asMultiple: FALSE
+asStatic: FALSE
