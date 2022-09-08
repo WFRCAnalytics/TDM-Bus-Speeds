@@ -98,6 +98,7 @@ for(i in 1:last_route){
 uta_on_tdm <- bind_rows(routes) %>%
   select(-LabelNum.1,-Label.1)
 
+utatdmtest <- uta_on_tdm %>% filter(LabelNum == 18)
 
 
 
@@ -126,7 +127,7 @@ centroid_speed_summary <- centroid_speeds %>%
 #IDEA for next steps
 #' filter out all non-consecutive / bad stop values
 segment_speeds <- tdm_centroids_full %>%
-  left_join((centroid_speeds %>% filter(DIR == 0)), by = c("centroid_id","LabelNum","Label")) %>% 
+  left_join((centroid_speeds %>% filter(DIR == 1)), by = c("centroid_id","LabelNum","Label")) %>% 
   distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>%
   select(-STOP,-STOP2) %>%
   left_join(centroid_speed_summary, by = c("centroid_id","Label","DIR")) %>%
@@ -137,6 +138,8 @@ segment_speeds <- tdm_centroids_full %>%
   group_by(LabelNum) %>%
   fill(Avgmph_C_down, .direction = "down") %>% fill(Avgmph_C_up, .direction = "up") %>%
   fill(Avgmphdwell_C_down, .direction = "down") %>% fill(Avgmphdwell_C_up, .direction = "up")
+
+segmentspeedstest <- segment_speeds %>% filter(LabelNum == 18) %>% select(LINKSEQ1,LINKSEQ2,LabelNum,centroid_id,STOP1,STOP2,35,36,42:45)
 
 estimated_segment_speeds <- segment_speeds %>%
   mutate(EstAvgmph = ifelse(bus_direction == "up",Avgmph_C_up,Avgmph_C_down),

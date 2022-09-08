@@ -24,7 +24,7 @@ get_transit_lines <- function(tdm_segment_data,tdm_segments){
     # create end node and link id
     mutate(B = lead(A)) %>%
     mutate(link_id = paste0(A,"_",B)) %>%
-    select("link_id",1:8,"B",9:24,"Label","LabelNum") %>%
+    #select("link_id",1:8,"B",9:24,"Label","LabelNum") %>%
     # join segment data to segment saptial object
     left_join(tdm_segments,by = c("link_id")) %>%
     filter(!is.na(A.y)) %>%
@@ -57,8 +57,9 @@ clean_uta_points <- function(uta_points){
     # filter out repeat stops or empty stop locations
     filter(STOP != STOP2, !is.na(STOP2)) %>%
     # create peak / off-peak variable
-    mutate(PkOk = ifelse(grepl("m peak",period),"pk","ok")) %>%
+    mutate(PkOk = ifelse(grepl("pm peak",period),"pk",ifelse(grepl("off-peak",period),"ok","other"))) %>%
     select(LabelNum,Label,DIR,period,PkOk,STOP,STOP2,Avgmph,Avgmphdwell,geometry) %>%
+    filter(PkOk %in% c("pk","ok")) %>%
     ungroup()
 }
 
@@ -126,83 +127,113 @@ merge_uta_tdm <- function(periodType,direction,last_route,uta_points_clean,tdm_c
 #'  take the average of these speeds for the link)
 calc_centroid_speeds <- function(uta_on_tdm){
   centroid_speeds <- uta_on_tdm %>% as.tibble() %>%
-    group_by(Label,DIR,centroid_id) %>%
+    group_by(LabelNum,Label,DIR,centroid_id) %>%
     arrange(Label,DIR,centroid_id) %>%
     #' take average if more than one stop exists
     mutate(Avgmph_C = mean(Avgmph),
            Avgmphdwell_C = mean(Avgmphdwell)) %>%
     filter(!is.na(centroid_id)) %>%
-    select(centroid_id,LabelNum,Label,DIR,PkOk,STOP,STOP2,Avgmph_C,Avgmphdwell_C) %>%
-    # remove duplicates
-    unique()
+    select(centroid_id,LabelNum,Label,DIR,PkOk,STOP,STOP2,Avgmph,Avgmph_C,Avgmphdwell,Avgmphdwell_C)
   centroid_speeds
 }
 
 #' create centroid summary statistics to determine the start and 
 #' end TDM nodes which correspond to the uta speeds (uta point
 #' speeds span several tdm links)
-calc_centroid_speed_summary <- function(centroid_speeds){
-  centroid_speeds %>%
+calc_centroid_speed_summary <- function(centroid_speeds, centroids){
+  cs <- centroid_speeds %>%
     # determine start and end tdm nodes per uta speed value
     summarize(STOP1 = list(STOP), STOP2 = list(STOP2)) %>%
-    mutate(start = as.numeric(map(STOP1,1)), end = as.numeric(map(STOP2,last))) %>%
-    # determine direction uta bus is traveling relative to table direction (up the table or down the table)
+    mutate(start = as.numeric(map(STOP1,1)), end = as.numeric(map(STOP2,last)))
+  
+  centroid_dirs <- cs %>%
+    left_join((centroids), by = c("centroid_id","Label")) %>%
+    filter(STOP1 != "NULL") %>%
     mutate(bus_direction = ifelse(start > lead(start),"up","down")) %>%
     fill(bus_direction) %>%
-    # some routes have no values, so just assume a down direction
-    mutate(bus_direction = ifelse(is.na(bus_direction),"down",bus_direction))
+    mutate(bus_direction = ifelse(is.na(bus_direction),"down",bus_direction)) %>%
+    rename("LabelNum" = LabelNum.x)
+  
+  directionsummary <- centroid_dirs %>%
+    group_by(LabelNum,Label,bus_direction,DIR) %>%
+    summarize(n = n()) %>% ungroup() %>%
+    #filter(!LabelNum %in% overlaps, !LabelNum %in% badoneways) %>%
+    group_by(LabelNum,Label,DIR) %>%
+    slice(which.max(n)) %>%
+    mutate(finaldir = bus_direction) %>% select(-n, -bus_direction) 
+  
+  centroid_dirs2 <- centroid_dirs %>% 
+    arrange(LabelNum,LINKSEQ1) %>%
+    left_join(directionsummary, by = c("LabelNum","Label","DIR")) %>%
+    left_join((centroid_speeds), by = c("centroid_id","LabelNum","Label"))%>%
+    mutate(tdmDir = ifelse(finaldir == "up" & LINKSEQ1 <= lead(LINKSEQ1), 2, 1)) %>%
+    mutate(tdmDir = ifelse(is.na(tdmDir), lag(tdmDir), tdmDir)) %>%
+    rename("DIR" = DIR.x, "STOP2" = STOP2.x) %>% select(-LabelNum.y, -DIR.y, -STOP2.y) %>%
+    select(centroid_id,LabelNum, Label, DIR, STOP1,STOP2, start, end, bus_direction, finaldir, tdmDir, PkOk, STOP, Avgmph, Avgmph_C, Avgmphdwell,Avgmphdwell_C)
+  centroid_dirs2
 }
+
+
+#instead of weird filling, lets join the direction summary AFTER we join the values onto the full tdm links file?
+
+
 
 #' calculate all the missing tdm segment speeds by assuming all 
 #' empty segments in-between segments with speeds get the previous
 #' speed value
-calc_segment_speeds <- function(centroids,centroid_speeds, centroid_speed_summary){
+calc_segment_speeds <- function(centroids, centroid_speed_summary){
   centroids %>%
-    #' join centroid speed summary and clean data
-    left_join((centroid_speeds), by = c("centroid_id","LabelNum","Label")) %>% 
-    distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>%
-    select(-STOP,-STOP2) %>%
-    left_join(centroid_speed_summary, by = c("centroid_id","Label","DIR")) %>%
+    left_join(centroid_speed_summary, by = c("centroid_id", "LabelNum", "Label")) %>%
+    arrange(LabelNum,LINKSEQ1) %>%
     mutate(STOP1 = ifelse(STOP1=="NULL",NA,STOP1), STOP2 = ifelse(STOP2=="NULL",NA,STOP2)) %>%
-    #' fill out all "in-between" links with uta bus centroid speeds 
-    #' that correspond with the link location
-    fill(bus_direction) %>%
-    mutate(Avgmph_C_down = Avgmph_C, Avgmph_C_up = Avgmph_C,
-           Avgmphdwell_C_down = Avgmphdwell_C, Avgmphdwell_C_up = Avgmphdwell_C) %>%
+    
     group_by(LabelNum) %>%
+    #ugly fix, so maybe do join directionSummary later on to fix it
+    fill(finaldir) %>% fill(finaldir, .direction="up") %>% fill(finaldir, .direction="down") %>%
+    fill(tdmDir) %>% fill(tdmDir, .direction = "up") %>% fill(tdmDir, .direction = "down") %>%
+    fill(bus_direction) %>% mutate(bus_direction = ifelse(is.na(bus_direction), finaldir, bus_direction)) %>%
+    
+    mutate(Avgmph_down = Avgmph, Avgmph_up = Avgmph, Avgmphdwell_down = Avgmphdwell, Avgmphdwell_up = Avgmphdwell) %>%
     #' fill the speeds according to the direction the uta points flow
-    fill(Avgmph_C_down, .direction = "down") %>% fill(Avgmph_C_up, .direction = "up") %>%
-    fill(Avgmphdwell_C_down, .direction = "down") %>% fill(Avgmphdwell_C_up, .direction = "up")
+    fill(Avgmph_down, .direction = "down") %>% fill(Avgmph_up, .direction = "up") %>%
+    fill(Avgmphdwell_down, .direction = "down") %>% fill(Avgmphdwell_up, .direction = "up")
 }
 
 #' clean data, shift to spatial Line object, and calculate speed ratio
 estimated_segment_speeds <- function(segment_speeds, tdm_segments){
   ss <- segment_speeds %>%
     #' clean data
-    mutate(EstAvgmph = ifelse(bus_direction == "up",Avgmph_C_up,Avgmph_C_down),
-           EstAvgmphdwell = ifelse(bus_direction == "up",Avgmphdwell_C_up, Avgmphdwell_C_down)) %>%
-    select(-Avgmph_C,-Avgmphdwell_C,-Avgmph_C_down,-Avgmph_C_up, -Avgmphdwell_C_down, -Avgmphdwell_C_up) %>%
-    fill(DIR, PkOk, EstAvgmph, EstAvgmphdwell) %>%
+    mutate(EstAvgmph = ifelse(finaldir == "up",Avgmph_up,Avgmph_down),
+           EstAvgmphdwell = ifelse(finaldir == "up",Avgmphdwell_up, Avgmphdwell_down)) %>%
+    mutate(EstAvgmph = ifelse(is.na(Avgmph), EstAvgmph, Avgmph_C),
+           EstAvgmphdwell = ifelse(is.na(Avgmphdwell), EstAvgmphdwell, Avgmphdwell_C)) %>%
+    distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>%
+    
+    select(-Avgmph_C,-Avgmphdwell_C,-Avgmph_down,-Avgmph_up, -Avgmphdwell_down, -Avgmphdwell_up) %>%
+    fill(DIR, PkOk) %>%
+    
+    
     #' use AvgSpeed when AvgDwellSpeed is 0  
     mutate(EstAvgmphdwell = ifelse(EstAvgmphdwell == 0, EstAvgmph,EstAvgmphdwell)) %>%
-    select(centroid_id,link_id,A.x,B.x,Label,LabelNum,MODE,ONEWAY,LINKSEQ1,LINKSEQ2,DIR,PkOk,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,EstAvgmphdwell)
+    select(centroid_id,link_id,A.x,B.x,Label,LabelNum,MODE,ONEWAY,LINKSEQ1,LINKSEQ2,DIR,tdmDir,PkOk,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,EstAvgmphdwell)
   
   #' shift centroid spatial object to link spatial object
   seg1 <- tdm_segments %>% select(link_id)
   speed1 <- ss %>% as_tibble() %>% select(-midlinep) %>% 
     group_by(LabelNum) %>%
     left_join(seg1) %>% distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>% 
-    st_as_sf()
+    st_as_sf() %>%
+    mutate(speedRatio = ifelse(PkOk == "pk", P_SPEED1/EstAvgmphdwell, O_SPEED1/EstAvgmphdwell))
   
   # fix interstate speeds by using the TDM network speeds instead of the bus speeds (DELETE IF NOT WANTED)
-  fixed_interstate <- speed1 %>%
-    mutate(EstAvgmphdwell = ifelse (PkOk == "pk", ifelse(EstAvgmphdwell < 40 & P_SPEED1 > 50, P_SPEED1, EstAvgmphdwell), 
-                                                  ifelse(EstAvgmphdwell < 40 & O_SPEED1 > 50, O_SPEED1, EstAvgmphdwell)))
+#  fixed_interstate <- speed1 %>%
+#    mutate(EstAvgmphdwell = ifelse (PkOk == "pk", ifelse(EstAvgmphdwell < 40 & P_SPEED1 > 50, P_SPEED1, EstAvgmphdwell), 
+#                                                  ifelse(EstAvgmphdwell < 40 & O_SPEED1 > 50, O_SPEED1, EstAvgmphdwell)))
   
   #' calculate speed ratio of TDM Modeled Speed and UTA Estimated Dwelling Speed
-  fixed_interstate %>% 
-    mutate(speedRatio = ifelse(PkOk == "pk", P_SPEED1/EstAvgmphdwell, O_SPEED1/EstAvgmphdwell)) %>%
-    mutate(speedColor = ifelse(speedRatio > 1, "red", "blue"))
+#  fixed_interstate %>% 
+#    mutate(speedRatio = ifelse(PkOk == "pk", P_SPEED1/EstAvgmphdwell, O_SPEED1/EstAvgmphdwell)) %>%
+#    mutate(speedColor = ifelse(speedRatio > 1, "red", "blue"))
 }
 
 average_estimated_speeds <- function(speed0, speed1){

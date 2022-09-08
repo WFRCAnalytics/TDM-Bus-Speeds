@@ -58,17 +58,17 @@ analysis_targets <- tar_plan(
   tar_target(ok_1_centroid_speeds, calc_centroid_speeds(ok_1_uta_on_tdm)),
   
   #' Determine start and end uta point per tdm centroid value
-  tar_target(pk_0_centroid_speed_summary, calc_centroid_speed_summary(pk_0_centroid_speeds)),
-  tar_target(pk_1_centroid_speeds_summary, calc_centroid_speed_summary(pk_1_centroid_speeds)),
-  tar_target(ok_0_centroid_speeds_summary, calc_centroid_speed_summary(ok_0_centroid_speeds)),
-  tar_target(ok_1_centroid_speeds_summary, calc_centroid_speed_summary(ok_1_centroid_speeds)),
+  tar_target(pk_0_centroid_speed_summary, calc_centroid_speed_summary(pk_0_centroid_speeds, tdm_centroids_clean)),
+  tar_target(pk_1_centroid_speeds_summary, calc_centroid_speed_summary(pk_1_centroid_speeds, tdm_centroids_clean)),
+  tar_target(ok_0_centroid_speeds_summary, calc_centroid_speed_summary(ok_0_centroid_speeds, tdm_centroids_clean)),
+  tar_target(ok_1_centroid_speeds_summary, calc_centroid_speed_summary(ok_1_centroid_speeds, tdm_centroids_clean)),
   
   #' Use start and end uta points to fill in all in-between tdm link
   #' speed values
-  tar_target(pk_0_segment_speeds, calc_segment_speeds(tdm_centroids_clean, pk_0_centroid_speeds, pk_0_centroid_speed_summary)),
-  tar_target(pk_1_segment_speeds, calc_segment_speeds(tdm_centroids_clean, pk_1_centroid_speeds, pk_1_centroid_speeds_summary)),
-  tar_target(ok_0_segment_speeds, calc_segment_speeds(tdm_centroids_clean, ok_0_centroid_speeds, ok_0_centroid_speeds_summary)),
-  tar_target(ok_1_segment_speeds, calc_segment_speeds(tdm_centroids_clean, ok_1_centroid_speeds, ok_1_centroid_speeds_summary)),
+  tar_target(pk_0_segment_speeds, calc_segment_speeds(tdm_centroids_clean, pk_0_centroid_speed_summary)),
+  tar_target(pk_1_segment_speeds, calc_segment_speeds(tdm_centroids_clean, pk_1_centroid_speeds_summary)),
+  tar_target(ok_0_segment_speeds, calc_segment_speeds(tdm_centroids_clean, ok_0_centroid_speeds_summary)),
+  tar_target(ok_1_segment_speeds, calc_segment_speeds(tdm_centroids_clean, ok_1_centroid_speeds_summary)),
   
   #' Clean data and calculate final link speeds
   tar_target(pk_0_estimated_speeds, estimated_segment_speeds(pk_0_segment_speeds, tdm_transit_lines)),
