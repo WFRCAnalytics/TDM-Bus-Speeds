@@ -25,7 +25,7 @@ get_transit_lines <- function(tdm_segment_data,tdm_segments){
     mutate(B = lead(A)) %>%
     mutate(link_id = paste0(A,"_",B)) %>%
     #select("link_id",1:8,"B",9:24,"Label","LabelNum") %>%
-    # join segment data to segment saptial object
+    # join segment data to segment spatial object
     left_join(tdm_segments,by = c("link_id")) %>%
     filter(!is.na(A.y)) %>%
     st_as_sf()
@@ -61,6 +61,35 @@ clean_uta_points <- function(uta_points){
     select(LabelNum,Label,DIR,period,PkOk,STOP,STOP2,Avgmph,Avgmphdwell,geometry) %>%
     filter(PkOk %in% c("pk","ok")) %>%
     ungroup()
+}
+
+#' For routes 12, 36, 39, 43, 45, 90, and 93 the uta dataset shows stops on both sides of the road
+#' In this function, we correct the dataset and split those routes to have two directions
+fix_clean_uta_points <- function(uta_points_clean){
+  uta_points_clean_fixed <- uta_points_clean %>%
+    mutate(DIR_fix = case_when(
+      (LabelNum == 12 & STOP > 10) ~ 1,
+      (LabelNum == 36 & STOP > 21) ~ 1,
+      (LabelNum == 39 & STOP > 20) ~ 1,
+      (LabelNum == 43 & STOP > 36) ~ 1,
+      (LabelNum == 45 & STOP > 35) ~ 1, 
+      (LabelNum == 90) ~ case_when(
+        (DIR == 0 & STOP > 38) ~ 3,
+        (DIR == 1 & STOP > 30) ~ 3,
+        TRUE ~ 2
+      ),
+      (LabelNum == 93) ~ case_when(
+        (DIR == 1 & PkOk == "pk" & STOP >= 29) ~ 3,
+        (DIR == 0 & PkOk == "pk" & STOP >= 51) ~ 3,
+        (DIR == 0 & PkOk == "ok" & STOP >= 51) ~ 3,
+        (DIR == 0 & PkOk == "ok" & STOP <= 24) ~ 3,
+        TRUE ~ 2
+      ),
+      TRUE ~ 2
+    )) %>%
+    filter(DIR_fix != 3) %>%
+    mutate(DIR = ifelse(DIR_fix != 2, DIR_fix, DIR)) %>%
+    select(-DIR_fix)
 }
 
 # adjust spatial attributes of uta points to map them easier

@@ -116,6 +116,7 @@ renderLeaflet({
     addProviderTiles(providers$CartoDB.Positron) %>%
     addCircleMarkers(lng = utaStops$lon, lat = utaStops$lat,
       popup = paste("Avgmphdwell: ",utaStops$Avgmphdwell, "<br>",
+                    "Avgmph: ",utaStops$Avgmph, "<br>",
                     "STOP1: ", utaStops$STOP, "<br>",
                     "STOP2: ", utaStops$STOP2),
       color = "red",
@@ -123,7 +124,7 @@ renderLeaflet({
       group = "UTA Stops") %>%
     addPolylines(
       data = routeMap$geometry, 
-      weight = routeMap$speedRatio*10,
+      #weight = routeMap$speedRatio*10,
       group = "TDM Links",
       popup = paste("MODE:", routeMap$MODE, "<br>",
                   "ONEWAY:", routeMap$ONEWAY, "<br>",
