@@ -28,19 +28,21 @@ data_targets <- tar_plan(
   #Spatial Orientation
   tar_target(uta_points, get_uta_points(uta_data)),
   tar_target(tdm_transit_lines, get_transit_lines(tdm_data, tdm_segments)),
-  tar_target(tdm_transit_nodes, get_transit_nodes(tdm_transit_lines)),
-  tar_target(tdm_centroids, make_centroids(tdm_transit_lines)),
+  tar_target(tdm_transit_lines_fixed, fix_transit_lines(tdm_transit_lines)),
+  tar_target(tdm_transit_nodes, get_transit_nodes(tdm_transit_lines_fixed)),
+  tar_target(tdm_centroids, make_centroids(tdm_transit_lines_fixed)),
   
   #Data Cleaning
   tar_target(uta_points_clean, clean_uta_points(uta_points)),
+  tar_target(uta_points_clean_fixed, fix_clean_uta_points(uta_points_clean)),
   tar_target(tdm_centroids_clean, clean_centroids(tdm_centroids)),
-  tar_target(uta_map_points, mapable_uta_points(uta_points_clean))
+  tar_target(uta_map_points, mapable_uta_points(uta_points_clean_fixed))
 )
 
 
 analysis_targets <- tar_plan(
   # Filter UTA Stops based on distance from TDM
-  tar_target(close_uta_points, filter_far_uta_stops(uta_points_clean,tdm_transit_lines,150,109)),
+  tar_target(close_uta_points, filter_far_uta_stops(uta_points_clean_fixed,tdm_transit_lines_fixed,150,109)),
   
   # Merge UTA Data onto Centroid Data by period and directionality
   #' (109 - total number of transit routes,
@@ -71,10 +73,10 @@ analysis_targets <- tar_plan(
   tar_target(ok_1_segment_speeds, calc_segment_speeds(tdm_centroids_clean, ok_1_centroid_speeds_summary)),
   
   #' Clean data and calculate final link speeds
-  tar_target(pk_0_estimated_speeds, estimated_segment_speeds(pk_0_segment_speeds, tdm_transit_lines)),
-  tar_target(pk_1_estimated_speeds, estimated_segment_speeds(pk_1_segment_speeds, tdm_transit_lines)),
-  tar_target(ok_0_estimated_speeds, estimated_segment_speeds(ok_0_segment_speeds, tdm_transit_lines)),
-  tar_target(ok_1_estimated_speeds, estimated_segment_speeds(ok_1_segment_speeds, tdm_transit_lines)),
+  tar_target(pk_0_estimated_speeds, estimated_segment_speeds(pk_0_segment_speeds, tdm_transit_lines_fixed)),
+  tar_target(pk_1_estimated_speeds, estimated_segment_speeds(pk_1_segment_speeds, tdm_transit_lines_fixed)),
+  tar_target(ok_0_estimated_speeds, estimated_segment_speeds(ok_0_segment_speeds, tdm_transit_lines_fixed)),
+  tar_target(ok_1_estimated_speeds, estimated_segment_speeds(ok_1_segment_speeds, tdm_transit_lines_fixed)),
   
   tar_target(pk_estimated_speeds, average_estimated_speeds(pk_0_estimated_speeds,pk_1_estimated_speeds)),
   tar_target(ok_estimated_speeds, average_estimated_speeds(ok_0_estimated_speeds,ok_1_estimated_speeds))

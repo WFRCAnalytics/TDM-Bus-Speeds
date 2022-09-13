@@ -31,6 +31,20 @@ get_transit_lines <- function(tdm_segment_data,tdm_segments){
     st_as_sf()
 }
 
+fix_transit_lines <- function(tdm_transit_lines){
+  outnbacklinks <- c(1,2,3,5,12,15,18,19,26,27,37,41,42,43,45,62,75,77,84,85,87)
+  
+  tdm_transit_lines_fixed <- tdm_transit_lines %>%
+    group_by(LabelNum,Label)%>%
+    mutate(halfseq = max(LINKSEQ1)/2) %>%
+    ungroup() %>%
+    mutate(Label = case_when(
+      (LabelNum %in% outnbacklinks & LINKSEQ1 <= halfseq) ~ paste0(Label,"_A"),
+      (LabelNum %in% outnbacklinks & LINKSEQ1 > halfseq) ~ paste0(Label,"_B"),
+      TRUE ~ Label
+    ))
+}
+
 # create the TDM transit nodes spatial object
 get_transit_nodes <- function(tdm_transit_lines){
   tdm_transit_lines %>%
@@ -137,17 +151,32 @@ merge_uta_tdm <- function(periodType,direction,last_route,uta_points_clean,tdm_c
   #' uta point onto the closest centroid value
   for(i in 1:last_route){
     tdm_centroids_route <- tdm_centroids %>% filter(LabelNum == i)
+    tdm_centroids_route_A <- tdm_centroids_route %>% filter(grepl("_A",Label))
+    tdm_centroids_route_B <- tdm_centroids_route %>% filter(grepl("_B",Label))
     uta_route <- uta_points_clean %>% filter(LabelNum == i, PkOk == periodType, DIR == direction)
-    joined_sf <- uta_route %>% 
-      cbind(tdm_centroids_route[st_nearest_feature(uta_route, tdm_centroids_route),]) %>%
-      mutate(dist = ifelse(is.na(LabelNum.1),NA,st_distance(midlinep, geometry, by_element = T))) %>%
-      as.tibble() %>% select(-geometry) %>% st_as_sf()
+    
+    if(nrow(tdm_centroids_route_A) > 0){
+      joined_sf_A <- uta_route %>% 
+        cbind(tdm_centroids_route_A[st_nearest_feature(uta_route, tdm_centroids_route_A),]) %>%
+        mutate(dist = ifelse(is.na(LabelNum.1),NA,st_distance(midlinep, geometry, by_element = T))) %>%
+        as.tibble() %>% select(-geometry) %>% st_as_sf()
+      joined_sf_B <- uta_route %>% 
+        cbind(tdm_centroids_route_B[st_nearest_feature(uta_route, tdm_centroids_route_B),]) %>%
+        mutate(dist = ifelse(is.na(LabelNum.1),NA,st_distance(midlinep, geometry, by_element = T))) %>%
+        as.tibble() %>% select(-geometry) %>% st_as_sf()
+      joined_sf <- rbind(joined_sf_A,joined_sf_B)
+    } else{
+      joined_sf <- uta_route %>% 
+        cbind(tdm_centroids_route[st_nearest_feature(uta_route, tdm_centroids_route),]) %>%
+        mutate(dist = ifelse(is.na(LabelNum.1),NA,st_distance(midlinep, geometry, by_element = T))) %>%
+        as.tibble() %>% select(-geometry) %>% st_as_sf()
+    }
     routes[[i]] <- joined_sf
   }
   
   #' combines joined uta-centroid data into one table
   uta_tdm <- bind_rows(routes) %>%
-    select(-LabelNum.1,-Label.1)
+    select(-LabelNum.1, -Label) %>%  rename("Label" = Label.1)
   uta_tdm
 }
 
@@ -176,12 +205,12 @@ calc_centroid_speed_summary <- function(centroid_speeds, centroids){
     mutate(start = as.numeric(map(STOP1,1)), end = as.numeric(map(STOP2,last)))
   
   centroid_dirs <- cs %>%
-    left_join((centroids), by = c("centroid_id","Label")) %>%
+    left_join((centroids), by = c("centroid_id","LabelNum")) %>% # CAN"T DO LABEL IF LABEL HAS CHANGED. FIX THIS!!!!!!!!!!!!!
     filter(STOP1 != "NULL") %>%
     mutate(bus_direction = ifelse(start > lead(start),"up","down")) %>%
     fill(bus_direction) %>%
     mutate(bus_direction = ifelse(is.na(bus_direction),"down",bus_direction)) %>%
-    rename("LabelNum" = LabelNum.x)
+    rename("Label" = Label.y) %>% select(-Label.x)
   
   directionsummary <- centroid_dirs %>%
     group_by(LabelNum,Label,bus_direction,DIR) %>%
@@ -197,7 +226,7 @@ calc_centroid_speed_summary <- function(centroid_speeds, centroids){
     left_join((centroid_speeds), by = c("centroid_id","LabelNum","Label"))%>%
     mutate(tdmDir = ifelse(finaldir == "up" & LINKSEQ1 <= lead(LINKSEQ1), 2, 1)) %>%
     mutate(tdmDir = ifelse(is.na(tdmDir), lag(tdmDir), tdmDir)) %>%
-    rename("DIR" = DIR.x, "STOP2" = STOP2.x) %>% select(-LabelNum.y, -DIR.y, -STOP2.y) %>%
+    rename("DIR" = DIR.x, "STOP2" = STOP2.x) %>% select(-DIR.y, -STOP2.y) %>%
     select(centroid_id,LabelNum, Label, DIR, STOP1,STOP2, start, end, bus_direction, finaldir, tdmDir, PkOk, STOP, Avgmph, Avgmph_C, Avgmphdwell,Avgmphdwell_C)
   centroid_dirs2
 }
@@ -216,7 +245,7 @@ calc_segment_speeds <- function(centroids, centroid_speed_summary){
     arrange(LabelNum,LINKSEQ1) %>%
     mutate(STOP1 = ifelse(STOP1=="NULL",NA,STOP1), STOP2 = ifelse(STOP2=="NULL",NA,STOP2)) %>%
     
-    group_by(LabelNum) %>%
+    group_by(LabelNum,Label) %>%
     #ugly fix, so maybe do join directionSummary later on to fix it
     fill(finaldir) %>% fill(finaldir, .direction="up") %>% fill(finaldir, .direction="down") %>%
     fill(tdmDir) %>% fill(tdmDir, .direction = "up") %>% fill(tdmDir, .direction = "down") %>%
@@ -249,10 +278,14 @@ estimated_segment_speeds <- function(segment_speeds, tdm_segments){
   #' shift centroid spatial object to link spatial object
   seg1 <- tdm_segments %>% select(link_id)
   speed1 <- ss %>% as_tibble() %>% select(-midlinep) %>% 
-    group_by(LabelNum) %>%
+    group_by(LabelNum,Label) %>%
     left_join(seg1) %>% distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>% 
     st_as_sf() %>%
-    mutate(speedRatio = ifelse(PkOk == "pk", P_SPEED1/EstAvgmphdwell, O_SPEED1/EstAvgmphdwell))
+    mutate(speedRatio = ifelse(PkOk == "pk", P_SPEED1/EstAvgmphdwell, O_SPEED1/EstAvgmphdwell)) 
+    
+    
+    #mutate(LabelNum = ifelse(grepl("_A",Label),LabelNum + .1, 
+    #                         ifelse(grepl("_B",Label),LabelNum + .2,LabelNum)))
   
   # fix interstate speeds by using the TDM network speeds instead of the bus speeds (DELETE IF NOT WANTED)
 #  fixed_interstate <- speed1 %>%
@@ -273,6 +306,8 @@ average_estimated_speeds <- function(speed0, speed1){
                                    ifelse(is.na(EstAvgmphdwell1), EstAvgmphdwell,
                                    (EstAvgmphdwell + EstAvgmphdwell1) / 2))
            )
+  
+  
   avespeed
 }
 

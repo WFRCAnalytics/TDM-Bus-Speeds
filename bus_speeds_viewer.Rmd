@@ -105,7 +105,8 @@ finalDir <- reactive({
 
 renderLeaflet({
   routeMap <- dperiod() %>% 
-    filter(LabelNum ==  dlabel()) %>% 
+    filter(LabelNum ==  dlabel(),
+           DIR == finalDir()) %>% 
     st_as_sf %>% st_transform(4326)
   utaStops <- uta_points %>% 
     filter(PkOk == finalPeriod()) %>% 
