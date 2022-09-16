@@ -62,9 +62,9 @@ renderText({
 ```
 
 ```{r, echo = FALSE}
-renderText({
-  "*Thickness of transit line based on speed ratio"
-})
+#renderText({
+#  "*Thickness of transit line based on speed ratio"
+#})
 ```
 
 
@@ -105,8 +105,7 @@ finalDir <- reactive({
 
 renderLeaflet({
   routeMap <- dperiod() %>% 
-    filter(LabelNum ==  dlabel(),
-           DIR == finalDir()) %>% 
+    filter(LabelNum ==  dlabel()) %>% 
     st_as_sf %>% st_transform(4326)
   utaStops <- uta_points %>% 
     filter(PkOk == finalPeriod()) %>% 
@@ -145,25 +144,40 @@ renderLeaflet({
 })
 
 renderPlot({
-  routeMap <- dperiod() %>% filter(LabelNum ==  dlabel()) %>% st_as_sf %>% st_transform(4326)
-  if(input$Period == 1){
-      return(ggplot(routeMap, aes(x = LINKSEQ1))+
-        geom_line(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = 1) + 
-        geom_point(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = 1) +
-        geom_line(aes(y=P_SPEED1, colour = "Modeled"), alpha = 1) +
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +  
-        geom_point(aes(y=P_SPEED1, colour = "Modeled")) +
-        scale_fill_manual(values = c("blue","red")))
-    
-  }
-  if(input$Period == 2){
-      return(ggplot(routeMap, aes(x = LINKSEQ1))+
-        geom_line(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = 1) +
-        geom_point(aes(y=EstAvgmphdwell, colour = "Observed"), alpha = 1) +
-        geom_line(aes(y=O_SPEED1, colour = "Modeled"), alpha = 1) +
-        geom_point(aes(y=O_SPEED1, colour = "Modeled"), alpha = 1) +
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
-        scale_fill_manual(values = c("blue","red")))
-  }
+  routeMap <- dperiod() %>% filter(LabelNum ==  dlabel()) %>% 
+    st_as_sf %>% st_transform(4326) %>% as.tibble() %>%
+    rename("Modeled" = ModelSpeed, "Observed" = EstAvgmphdwell) %>%
+    mutate(Modeled = ifelse(is.na(Modeled),P_SPEED1,Modeled)) %>%
+    select(LINKSEQ1,Observed,Modeled)  %>% 
+    pivot_longer(!LINKSEQ1,names_to = "Type",values_to = "Speed")
+  
+    return(ggplot(routeMap, aes(x = LINKSEQ1, y = Speed, fill = Type))+
+        geom_col(alpha = .25, position = "dodge2")+     
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+        geom_line(aes(x = LINKSEQ1,y = Speed, colour = Type))+
+        scale_color_manual(values = c("blue","red")) +
+        scale_fill_manual(values = c("blue","red")) +
+        theme_bw()
+      )
+
 })
+
+renderPlot({
+  routeMap <- dperiod() %>% filter(LabelNum ==  dlabel()) %>% 
+    st_as_sf %>% st_transform(4326) %>% as.tibble() %>%
+    select(LINKSEQ1,PercentError) %>%
+    mutate(col = ifelse(PercentError > 0, "blue","red"))
+  
+    return(ggplot(routeMap, aes(x = LINKSEQ1, y = PercentError, color = col))+
+        geom_col(alpha = .25)+     
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+        scale_color_manual(values = c("lightblue","pink"))+
+        theme(legend.position = "none") +
+        theme_bw()
+      )
+
+})
+
+
+
 ```

@@ -27,7 +27,7 @@ get_transit_lines <- function(tdm_segment_data,tdm_segments){
     #select("link_id",1:8,"B",9:24,"Label","LabelNum") %>%
     # join segment data to segment spatial object
     left_join(tdm_segments,by = c("link_id")) %>%
-    filter(!is.na(A.y)) %>%
+    #filter(!is.na(A.y)) %>%
     st_as_sf()
 }
 
@@ -205,7 +205,7 @@ calc_centroid_speed_summary <- function(centroid_speeds, centroids){
     mutate(start = as.numeric(map(STOP1,1)), end = as.numeric(map(STOP2,last)))
   
   centroid_dirs <- cs %>%
-    left_join((centroids), by = c("centroid_id","LabelNum")) %>% # CAN"T DO LABEL IF LABEL HAS CHANGED. FIX THIS!!!!!!!!!!!!!
+    left_join((centroids), by = c("centroid_id","LabelNum")) %>% 
     filter(STOP1 != "NULL") %>%
     mutate(bus_direction = ifelse(start > lead(start),"up","down")) %>%
     fill(bus_direction) %>%
@@ -215,7 +215,6 @@ calc_centroid_speed_summary <- function(centroid_speeds, centroids){
   directionsummary <- centroid_dirs %>%
     group_by(LabelNum,Label,bus_direction,DIR) %>%
     summarize(n = n()) %>% ungroup() %>%
-    #filter(!LabelNum %in% overlaps, !LabelNum %in% badoneways) %>%
     group_by(LabelNum,Label,DIR) %>%
     slice(which.max(n)) %>%
     mutate(finaldir = bus_direction) %>% select(-n, -bus_direction) 
@@ -231,11 +230,6 @@ calc_centroid_speed_summary <- function(centroid_speeds, centroids){
   centroid_dirs2
 }
 
-
-#instead of weird filling, lets join the direction summary AFTER we join the values onto the full tdm links file?
-
-
-
 #' calculate all the missing tdm segment speeds by assuming all 
 #' empty segments in-between segments with speeds get the previous
 #' speed value
@@ -244,13 +238,14 @@ calc_segment_speeds <- function(centroids, centroid_speed_summary){
     left_join(centroid_speed_summary, by = c("centroid_id", "LabelNum", "Label")) %>%
     arrange(LabelNum,LINKSEQ1) %>%
     mutate(STOP1 = ifelse(STOP1=="NULL",NA,STOP1), STOP2 = ifelse(STOP2=="NULL",NA,STOP2)) %>%
-    
     group_by(LabelNum,Label) %>%
     #ugly fix, so maybe do join directionSummary later on to fix it
     fill(finaldir) %>% fill(finaldir, .direction="up") %>% fill(finaldir, .direction="down") %>%
     fill(tdmDir) %>% fill(tdmDir, .direction = "up") %>% fill(tdmDir, .direction = "down") %>%
-    fill(bus_direction) %>% mutate(bus_direction = ifelse(is.na(bus_direction), finaldir, bus_direction)) %>%
-    
+    fill(DIR) %>% fill(DIR, .direction = "up") %>% fill(DIR, .direction = "down") %>%
+    fill(PkOk) %>% fill(PkOk, .direction = "up") %>% fill(PkOk, .direction = "down") %>%
+    fill(bus_direction) %>% 
+    mutate(bus_direction = ifelse(is.na(bus_direction), finaldir, bus_direction)) %>%
     mutate(Avgmph_down = Avgmph, Avgmph_up = Avgmph, Avgmphdwell_down = Avgmphdwell, Avgmphdwell_up = Avgmphdwell) %>%
     #' fill the speeds according to the direction the uta points flow
     fill(Avgmph_down, .direction = "down") %>% fill(Avgmph_up, .direction = "up") %>%
@@ -260,54 +255,50 @@ calc_segment_speeds <- function(centroids, centroid_speed_summary){
 #' clean data, shift to spatial Line object, and calculate speed ratio
 estimated_segment_speeds <- function(segment_speeds, tdm_segments){
   ss <- segment_speeds %>%
-    #' clean data
+    #' clean data by filling in missing values
     mutate(EstAvgmph = ifelse(finaldir == "up",Avgmph_up,Avgmph_down),
            EstAvgmphdwell = ifelse(finaldir == "up",Avgmphdwell_up, Avgmphdwell_down)) %>%
     mutate(EstAvgmph = ifelse(is.na(Avgmph), EstAvgmph, Avgmph_C),
            EstAvgmphdwell = ifelse(is.na(Avgmphdwell), EstAvgmphdwell, Avgmphdwell_C)) %>%
+    mutate(EstAvgmph = ifelse(is.na(EstAvgmph), ifelse(finaldir == "up",Avgmph_down,Avgmph_up),EstAvgmph),
+          EstAvgmphdwell = ifelse(is.na(EstAvgmphdwell), ifelse(finaldir == "down",Avgmphdwell_up,Avgmphdwell_down),EstAvgmphdwell)) %>%
     distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>%
-    
     select(-Avgmph_C,-Avgmphdwell_C,-Avgmph_down,-Avgmph_up, -Avgmphdwell_down, -Avgmphdwell_up) %>%
     fill(DIR, PkOk) %>%
-    
-    
     #' use AvgSpeed when AvgDwellSpeed is 0  
     mutate(EstAvgmphdwell = ifelse(EstAvgmphdwell == 0, EstAvgmph,EstAvgmphdwell)) %>%
     select(centroid_id,link_id,A.x,B.x,Label,LabelNum,MODE,ONEWAY,LINKSEQ1,LINKSEQ2,DIR,tdmDir,PkOk,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,EstAvgmphdwell)
   
   #' shift centroid spatial object to link spatial object
+  #' also calculate the speed ratio
   seg1 <- tdm_segments %>% select(link_id)
   speed1 <- ss %>% as_tibble() %>% select(-midlinep) %>% 
     group_by(LabelNum,Label) %>%
     left_join(seg1) %>% distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>% 
-    st_as_sf() %>%
-    mutate(speedRatio = ifelse(PkOk == "pk", P_SPEED1/EstAvgmphdwell, O_SPEED1/EstAvgmphdwell)) 
+    st_as_sf()
     
-    
-    #mutate(LabelNum = ifelse(grepl("_A",Label),LabelNum + .1, 
-    #                         ifelse(grepl("_B",Label),LabelNum + .2,LabelNum)))
-  
-  # fix interstate speeds by using the TDM network speeds instead of the bus speeds (DELETE IF NOT WANTED)
-#  fixed_interstate <- speed1 %>%
-#    mutate(EstAvgmphdwell = ifelse (PkOk == "pk", ifelse(EstAvgmphdwell < 40 & P_SPEED1 > 50, P_SPEED1, EstAvgmphdwell), 
-#                                                  ifelse(EstAvgmphdwell < 40 & O_SPEED1 > 50, O_SPEED1, EstAvgmphdwell)))
-  
+  #fix interstate speeds by deleting any speeds that just don't make sense
+  fixed_interstate <- speed1 %>%
+    mutate(EstAvgmphdwell = ifelse (PkOk == "pk", ifelse(EstAvgmphdwell < 30 & P_SPEED1 > 50, NA, EstAvgmphdwell), 
+                                                      ifelse(EstAvgmphdwell < 30 & O_SPEED1 > 50, NA, EstAvgmphdwell)))
   #' calculate speed ratio of TDM Modeled Speed and UTA Estimated Dwelling Speed
-#  fixed_interstate %>% 
-#    mutate(speedRatio = ifelse(PkOk == "pk", P_SPEED1/EstAvgmphdwell, O_SPEED1/EstAvgmphdwell)) %>%
-#    mutate(speedColor = ifelse(speedRatio > 1, "red", "blue"))
+  fixed_interstate %>% 
+    mutate(ModelSpeed = ifelse(PkOk == "pk",ifelse(tdmDir == 2 & P_SPEED2 != 0, P_SPEED2, P_SPEED1), 
+                               ifelse(tdmDir == 2 & O_SPEED2 != 0, O_SPEED2, O_SPEED1))) %>%
+    mutate(speedRatio = ModelSpeed / EstAvgmphdwell) %>%
+    
+    #'calculate percent error
+    mutate(PercentError = (EstAvgmphdwell - ModelSpeed)/ModelSpeed)  
 }
 
 average_estimated_speeds <- function(speed0, speed1){
   speed1small <- speed1 %>% select(centroid_id, EstAvgmphdwell) %>% rename("EstAvgmphdwell1" = EstAvgmphdwell) %>% as.tibble() %>% select(-geometry)
   avespeed <- left_join(speed0,speed1small,by = c("centroid_id")) %>%
     mutate(EstAvgmphdwell0 = EstAvgmphdwell,
-           EstAvgmphdwell = ifelse(is.na(EstAvgmphdwell),EstAvgmphdwell0,
+           EstAvgmphdwell = ifelse(is.na(EstAvgmphdwell),EstAvgmphdwell1,
                                    ifelse(is.na(EstAvgmphdwell1), EstAvgmphdwell,
                                    (EstAvgmphdwell + EstAvgmphdwell1) / 2))
            )
-  
-  
   avespeed
 }
 
