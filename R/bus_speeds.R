@@ -60,20 +60,23 @@ make_centroids <- function(tdm_transit_lines) {
     mutate(centroid_id = row_number()) 
 }
 
+#' just am routes 2x, 919, 920 (40,106,107)
 
 # Clean Data ------------------------------------------------------------------#
 #' clean the uta point dataset
 clean_uta_points <- function(uta_points){
-  uta_points %>%
+  test1 <- uta_points %>%
     group_by(ROUTE,DIR,period) %>%
     # create end node
     mutate(STOP2 = lead(STOP)) %>%
     # filter out repeat stops or empty stop locations
     filter(STOP != STOP2, !is.na(STOP2)) %>%
     # create peak / off-peak variable
-    mutate(PkOk = ifelse(grepl("pm peak",period),"pk",ifelse(grepl("off-peak",period),"ok","other"))) %>%
-    select(LabelNum,Label,DIR,period,PkOk,STOP,STOP2,Avgmph,Avgmphdwell,geometry) %>%
+    mutate(PkOk = ifelse(grepl("m peak",period),"pk",ifelse(grepl("off-peak",period),"ok","other"))) %>%
     filter(PkOk %in% c("pk","ok")) %>%
+    group_by(LabelNum,Label,DIR,PkOk,STOP,STOP2) %>%
+    summarise(Avgmph_pkok = mean(Avgmph), Avgmphdwell_pkok = mean(Avgmphdwell)) %>%
+    rename("Avgmph" = Avgmph_pkok, "Avgmphdwell" = Avgmphdwell_pkok) %>%
     ungroup()
 }
 
