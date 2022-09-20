@@ -1,7 +1,7 @@
 ---
 title: "TDM - UTA Bus Speed Comparison Tool"
 output: html_document
-date: '2022-08-16'
+date: '2022-09-19'
 runtime: shiny
 resource_files:
 - _targets.R
@@ -128,6 +128,7 @@ renderLeaflet({
       group = "TDM Links",
       popup = paste("MODE:", routeMap$MODE, "<br>",
                   "ONEWAY:", routeMap$ONEWAY, "<br>",
+                  "Direction:", routeMap$Direction, "<br>",
                   "LINKSEQ1:", routeMap$LINKSEQ1, "<br>",
                   "LINKSEQ2:", routeMap$LINKSEQ2, "<br>",
                   "P_SPEED1:", routeMap$P_SPEED1, "<br>",
@@ -157,6 +158,9 @@ renderPlot({
         geom_line(aes(x = LINKSEQ1,y = Speed, colour = Type))+
         scale_color_manual(values = c("blue","red")) +
         scale_fill_manual(values = c("blue","red")) +
+        xlab("Link Sequence ID") + ylab("Speed (mph)") +
+        ggtitle("Speed Comparison by Link") +
+        theme()+
         theme_bw()
       )
 
@@ -165,18 +169,47 @@ renderPlot({
 renderPlot({
   routeMap <- dperiod() %>% filter(LabelNum ==  dlabel()) %>% 
     st_as_sf %>% st_transform(4326) %>% as.tibble() %>%
-    select(LINKSEQ1,PercentError) %>%
-    mutate(col = ifelse(PercentError > 0, "blue","red"))
+    rename("Modeled" = ModelSpeed, "Observed" = EstAvgmphdwell) %>%
+    mutate(Modeled = ifelse(is.na(Modeled),P_SPEED1,Modeled)) %>%
+    select(LINKSEQ1,Observed,Modeled)  %>% 
+    pivot_longer(!LINKSEQ1,names_to = "Type",values_to = "Speed") %>%
+    group_by(Type) %>%
+    mutate(mean = mean(Speed))
   
-    return(ggplot(routeMap, aes(x = LINKSEQ1, y = PercentError, color = col))+
-        geom_col(alpha = .25)+     
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-        scale_color_manual(values = c("lightblue","pink"))+
-        theme(legend.position = "none") +
+    return(ggplot(routeMap, aes(x = Speed))+
+        geom_density(aes(fill = Type, alpha = .1)) +    
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+        geom_vline(data = routeMap, aes(xintercept=mean, color=Type), linetype="dashed",size=0.8) +
+        scale_fill_manual(values = c("blue","red")) +
+        scale_color_manual(values = c("blue","red")) +
+        xlab("Speed (mph)") + ylab("Percentage of Links") +
+        ggtitle("Distribution of Link Speeds") +
+        geom_abline(aes(intercept=-2, slope=0, lty='Average', linetype = "dashed"), col = "black") +
+        labs(linetype = NULL) +
+        scale_alpha(guide = 'none') +
         theme_bw()
       )
 
 })
+      
+
+
+
+#renderPlot({
+#  routeMap <- dperiod() %>% filter(LabelNum ==  dlabel()) %>% 
+#    st_as_sf %>% st_transform(4326) %>% as.tibble() %>%
+#    select(LINKSEQ1,PercentError) %>%
+#    mutate(col = ifelse(PercentError > 0, "blue","red"))
+#  
+#    return(ggplot(routeMap, aes(x = LINKSEQ1, y = PercentError, color = col))+
+#        geom_col(alpha = .25)+     
+#        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#        scale_color_manual(values = c("lightblue","pink"))+
+#        theme(legend.position = "none") +
+#        theme_bw()
+#      )
+#
+#})
 
 
 

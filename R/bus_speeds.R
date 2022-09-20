@@ -43,6 +43,13 @@ fix_transit_lines <- function(tdm_transit_lines){
       (LabelNum %in% outnbacklinks & LINKSEQ1 > halfseq) ~ paste0(Label,"_B"),
       TRUE ~ Label
     ))
+  
+  # add compass direction for ~40% of
+  tdmcompassdir <- read.dbf("data/TDM/TDMLinksDirection.dbf") %>%
+    select(LINKID,Direction)
+  left_join(tdm_transit_lines_fixed, tdmcompassdir, by = c("link_id" = "LINKID"))
+  
+  
 }
 
 # create the TDM transit nodes spatial object
@@ -274,7 +281,7 @@ estimated_segment_speeds <- function(segment_speeds, tdm_segments){
   
   #' shift centroid spatial object to link spatial object
   #' also calculate the speed ratio
-  seg1 <- tdm_segments %>% select(link_id)
+  seg1 <- tdm_segments %>% select(link_id, Direction)
   speed1 <- ss %>% as_tibble() %>% select(-midlinep) %>% 
     group_by(LabelNum,Label) %>%
     left_join(seg1) %>% distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>% 
@@ -304,8 +311,3 @@ average_estimated_speeds <- function(speed0, speed1){
            )
   avespeed
 }
-
-
-
-
-
