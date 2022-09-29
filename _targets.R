@@ -83,18 +83,22 @@ analysis_targets <- tar_plan(
   
 )
 
-# Still To Do
-#' Filter out or identify those stops that don't connect between centroids
-#' determine which speed matches with which directionality
-#' why are Avgmphdwell speeds 0 sometimes?
-#' Maybe filter out really slow uta speeds?
+visual_targets<- tar_plan(
+  tar_target(joint_estimated_speeds, join_estimated_speeds(pk_0_estimated_speeds, pk_1_estimated_speeds, ok_0_estimated_speeds, ok_1_estimated_speeds)),
+  tar_target(lineGraphs, mapLineGraphs(joint_estimated_speeds)),
+  tar_target(scatterPlots, mapScatterPlots(joint_estimated_speeds))
+)
 
 
 tar_plan(
   data_targets,
-  analysis_targets
+  analysis_targets,
+  visual_targets
 )
 
+#lineGraphs <- tar_read(lineGraphs)
+#makePNGs(lineGraphs, "outputs/LineGraphs")
+#scatterPlots <- tar_read(scatterPlots)
+#makePNGs(scatterPlots, "outputs/ScatterPlots")
 
-#' route 18 is a good example of the flaws in my methodology. Try to fix it!! (UTA speeds aren't lining up with corresponding tdm links
-#' ex. freeway links are like 20mph when the uta stops indicate above 40mph)
+
