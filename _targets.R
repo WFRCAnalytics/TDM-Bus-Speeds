@@ -10,6 +10,7 @@ library(RColorBrewer)
 library(rgdal)
 
 source("R/bus_speeds.R")
+source("R/bus_speeds_visuals.R")
 
 
 data_targets <- tar_plan(
@@ -84,9 +85,12 @@ analysis_targets <- tar_plan(
 )
 
 visual_targets<- tar_plan(
+  #' create visual plots to understand how UTA observed speeds compare with TDM modeled speeds
   tar_target(joint_estimated_speeds, join_estimated_speeds(pk_0_estimated_speeds, pk_1_estimated_speeds, ok_0_estimated_speeds, ok_1_estimated_speeds)),
-  tar_target(lineGraphs, mapLineGraphs(joint_estimated_speeds)),
-  tar_target(scatterPlots, mapScatterPlots(joint_estimated_speeds))
+  tar_target(descLineGraphs, mapDescLineGraphs(joint_estimated_speeds)),
+  tar_target(descScatterPlots, mapDescScatterPlots(joint_estimated_speeds)),
+  tar_target(aveScatterPlots, mapAveScatterPlots(joint_estimated_speeds)),
+  tar_target(errScatterPlots, mapErrScatterPlots(joint_estimated_speeds))
 )
 
 
@@ -96,9 +100,13 @@ tar_plan(
   visual_targets
 )
 
-#lineGraphs <- tar_read(lineGraphs)
-#makePNGs(lineGraphs, "outputs/LineGraphs")
-#scatterPlots <- tar_read(scatterPlots)
-#makePNGs(scatterPlots, "outputs/ScatterPlots")
+#descLineGraphs <- tar_read(descLineGraphs)
+#makePNGs(descLineGraphs, "outputs/DescendingSpeeds_Exact")
+#descScatterPlots <- tar_read(descScatterPlots)
+#makePNGs(descScatterPlots, "outputs/DescendingSpeeds_Average")
+#aveScatterPlots <- tar_read(aveScatterPlots)
+#makePNGs(aveScatterPlots, "outputs/ScatterPlotSpeeds_Average")
+#errScatterPlots <- tar_read(errScatterPlots)
+#makePNGs(errScatterPlots, "outputs/ScatterPlotSpeeds_Error")
 
 

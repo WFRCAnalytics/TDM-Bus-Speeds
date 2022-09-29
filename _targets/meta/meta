@@ -1,7 +1,9 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-.Random.seed|object|375dde1a43198653|||||||||||||||
+.Random.seed|object|ab62e867949fc8e8|||||||||||||||
 analysis_targets|object|639b7ba055bdc0c5|||||||||||||||
 average_estimated_speeds|function|033ea0861d84e883|||||||||||||||
+aveScatterPlots|stem|d8beac26bb123e37|196f580a89c352ca|37b2a35fafd1e2b7|1731014601||t19264.6589171742s|e78dac92f7451133|13841384|rds|local|vector|||0.69|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.|
+aveScatterPlotter|function|59bac7ca3a9c0fc1|||||||||||||||
 calc_centroid_speed_summary|function|be18fc537b244097|||||||||||||||
 calc_centroid_speeds|function|b47f9c4f74ee5f58|||||||||||||||
 calc_segment_speeds|function|a95b0313110ae1bf|||||||||||||||
@@ -9,6 +11,12 @@ clean_centroids|function|8359fc68bbe5327d|||||||||||||||
 clean_uta_points|function|08f18de7037b2a38|||||||||||||||
 close_uta_points|stem|358db7692474fc68|85475fea33764aba|a04d24fdab9f1ab7|-2107762045||t19263.6938910367s|5dd5590653c219fb|119128|rds|local|vector|||7.99||
 data_targets|object|fc7fb569eb285284|||||||||||||||
+descLineGraphs|stem|52130e7592ac5a6f|4d89e412cf77e8c4|cd06927b9b325d67|1995523998||t19264.6590057467s|b7bce068fef3b3b0|13740849|rds|local|vector|||0.68||
+descLinePlotter|function|4cded3eb14523a86|||||||||||||||
+descScatterPlots|stem|a1880df1cec561a4|324ce766cc5d897b|7af98a08d7b8bfb4|135205505||t19264.6589621138s|ffdb4c5eaad28be7|13855276|rds|local|vector|||0.69||
+descScatterPlotter|function|df5959fbacad7527|||||||||||||||
+errorScatterPlotter|function|06c90a0e779cd60c|||||||||||||||
+errScatterPlots|stem|5e821531501f02cd|18713ce1e3e81e6e|90a6e1882434fa4e|-1533597732||t19264.6831635127s|1b2b9ca62c1747b1|13920005|rds|local|vector|||0.56|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.|
 estimated_segment_speeds|function|68534552f688241a|||||||||||||||
 filter_far_uta_stops|function|84e93fc220bab7cd|||||||||||||||
 fix_clean_uta_points|function|d69e469881a5215e|||||||||||||||
@@ -17,13 +25,17 @@ get_tdm_segments|function|109bb6e2e941a75c|||||||||||||||
 get_transit_lines|function|379b09bd9cd8036f|||||||||||||||
 get_transit_nodes|function|911c43dccbf8c283|||||||||||||||
 get_uta_points|function|6e1a649b00cdc9d6|||||||||||||||
-join_estimated_speeds|function|9e99a1a95f761b24|||||||||||||||
-joint_estimated_speeds|stem|75548e9f0eef0476|4436edc79e0394d6|5a425dd548b13411|982189788||t19263.8935157699s|e48c04a3bb511e8c|774971|rds|local|vector|||0.52||
+join_estimated_speeds|function|ab2c7e0a7062241e|||||||||||||||
+joint_estimated_speeds|stem|dfad0b37d8f34606|4436edc79e0394d6|ce32f2af81c75a3d|982189788||t19264.6588740666s|ce86f01c638c2d7b|774968|rds|local|vector|||0.53||
 lineGraphs|stem|25abbb4a5838365f|01f49d89cfc20a9c|5790bdc4f2960a63|27300605||t19263.8960458345s|077fbd5ec235ae51|13740851|rds|local|vector|||0.75||
 linePlotter|function|4cded3eb14523a86|||||||||||||||
 make_centroids|function|55729949656200f6|||||||||||||||
 makePNGs|function|39477afc848d24a5|||||||||||||||
 mapable_uta_points|function|98f9f353fb4ea8b2|||||||||||||||
+mapAveScatterPlots|function|89429601509bd654|||||||||||||||
+mapDescLineGraphs|function|d3eac5c9c8ad066b|||||||||||||||
+mapDescScatterPlots|function|8989c1e6afad5007|||||||||||||||
+mapErrScatterPlots|function|ab09bfd920911f95|||||||||||||||
 mapLineGraphs|function|4ed4fff7f45adedf|||||||||||||||
 mapScatterPlots|function|00f94ad04cdf4dc3|||||||||||||||
 merge_uta_tdm|function|fa7d5bece0280546|||||||||||||||
@@ -69,4 +81,4 @@ uta_map_points|stem|6978c9f391cbb8df|fcb466a488f299b7|1dcaac503a4cc220|422199863
 uta_points|stem|58e05ed8feeabcd7|e353058fcaa5076f|d1aa27c450c988a7|-1737479036||t19212.9005549154s|61811d317f7de6cb|252097|rds|local|vector|||0.29||
 uta_points_clean|stem|68491e3730c5058f|ceff6ef0d3d9a0a8|9922eac7911e53f1|2144636873||t19254.7110551074s|d1069a083b754ec8|131998|rds|local|vector|||140.31||
 uta_points_clean_fixed|stem|074a7ddb5b2b26b2|d865c1916ae97878|b160f1578570f6c1|69646175||t19254.7110578055s|92d11aada2f6b35a|131948|rds|local|vector|||0.16||
-visual_targets|object|612a0e0480cd974c|||||||||||||||
+visual_targets|object|d305d11445acea45|||||||||||||||
