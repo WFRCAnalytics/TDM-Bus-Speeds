@@ -1,11 +1,8 @@
 
 # Visual Objects ------------------------------------------------------------------#
-join_estimated_speeds <- function(pk_0_es, pk_1_es, ok_0_es, ok_1_es){
+join_estimated_speeds <- function(pk_0_es, pk_1_es, ok_0_es, ok_1_es, ft_grouping_col){
   bind_rows(pk_0_es, pk_1_es, ok_0_es, ok_1_es) %>%
     filter(!is.na(EstAvgmphdwell) & !is.na(ModelSpeed)) %>%
-    group_by(FT_2021, MODE) %>%
-    arrange(-ModelSpeed) %>%
-    mutate(link_seq = row_number()) %>%
     rename("Modeled" = ModelSpeed, "Observed" = EstAvgmphdwell )%>%
     mutate(Modeled = ifelse(is.na(Modeled),P_SPEED1,Modeled)) %>%
     mutate(
@@ -19,142 +16,66 @@ join_estimated_speeds <- function(pk_0_es, pk_1_es, ok_0_es, ok_1_es){
         TRUE ~ "None"
       ),  
       FT_Name = case_when(
-        FT_2021 == 1 ~ "1-Centroid Connector",
-        FT_2021 == 2 ~ "2-Principal Arterial",
-        FT_2021 == 3 ~ "3-Minor Arterial",
-        FT_2021 == 4 ~ "4-Major Collector",
-        FT_2021 == 5 ~ "5-Minor Collector",
-        FT_2021 == 13 ~ "13-Expressway (55-65mph)",
-        FT_2021 == 14 ~ "14-Expressway (50-60mph)",
-        FT_2021 == 15 ~ "15-Expressway (45-55mph)",
-        FT_2021 == 30 ~ "30-Fwy: fwy-to-fwy loop ramp",
-        FT_2021 == 31 ~ "31-Fwy: C-D road, flyover ramp",
-        FT_2021 == 33 ~ "33-Fwy: (65mph), no aux lane",
-        FT_2021 == 34 ~ "34-Fwy: (65pmh), aux lane",
-        FT_2021 == 35 ~ "35-Fwy: (75pmh), no aux lane",
-        FT_2021 == 36 ~ "36-Fwy: (75mph), aux lane",
-        FT_2021 == 38 ~ "38-Fwy: Managed lane",
-        FT_2021 == 39 ~ "39-Fwy: Managed lane access",
-        FT_2021 == 41 ~ "41-Fwy: On-ramp",
-        FT_2021 == 42 ~ "42-Fwy: Off-ramp",
+        FT_2019 == 1 ~ "1-Centroid Connector",
+        FT_2019 == 2 ~ "2-Principal Arterial",
+        FT_2019 == 3 ~ "3-Minor Arterial",
+        FT_2019 == 4 ~ "4-Major Collector",
+        FT_2019 == 5 ~ "5-Minor Collector",
+        FT_2019 == 13 ~ "13-Expressway (55-65mph)",
+        FT_2019 == 14 ~ "14-Expressway (50-60mph)",
+        FT_2019 == 15 ~ "15-Expressway (45-55mph)",
+        FT_2019 == 30 ~ "30-Fwy: fwy-to-fwy loop ramp",
+        FT_2019 == 31 ~ "31-Fwy: C-D road, flyover ramp",
+        FT_2019 == 33 ~ "33-Fwy: (65mph), no aux lane",
+        FT_2019 == 34 ~ "34-Fwy: (65pmh), aux lane",
+        FT_2019 == 35 ~ "35-Fwy: (75pmh), no aux lane",
+        FT_2019 == 36 ~ "36-Fwy: (75mph), aux lane",
+        FT_2019 == 38 ~ "38-Fwy: Managed lane",
+        FT_2019 == 39 ~ "39-Fwy: Managed lane access",
+        FT_2019 == 41 ~ "41-Fwy: On-ramp",
+        FT_2019 == 42 ~ "42-Fwy: Off-ramp",
         TRUE ~ "None"
-      ))
+      )) %>%
+    mutate(
+      FTG_2019 = case_when(
+        FT_2019 %in% c(20:26,30:40) ~ 30,
+        FT_2019 %in% c(28:29,41:42) ~ 40,
+        FT_2019 == 3 & AREATYPE %in% c(4,5) ~ 3,
+        FT_2019 == 3  & AREATYPE %in% c(1,2,3) ~ 4,
+        FT_2019 %in% c(1,4:8) ~ 1,
+        FT_2019 %in% c(2,13:15) ~  2,
+        TRUE ~ 0 
+    )) %>%
+    mutate(
+      FTG_Name = case_when(
+        FTG_2019 == 30 ~ "FT-Freeways",
+        FTG_2019 == 40 ~ "FT-Ramps",
+        FTG_2019 == 3 ~ "FT-Minor Arterials (Urban)",
+        FTG_2019 == 4 ~ "FT-Minor Arterials (Suburban)",
+        FTG_2019 == 1 ~ "FT-Collectors & Locals",
+        FTG_2019 == 2 ~ "FT-Principal Arterials & Expressways",
+        TRUE ~ "None"
+    )) %>%
+    filter(FTG_2019 != 0) %>%
+    group_by({{ft_grouping_col}}, MODE) %>%
+    arrange(-Modeled) %>%
+    mutate(link_seq = row_number())
 }
 
-mapDescLineGraphs <- function(jointspeeds){
-  ft1 <- descLinePlotter(jointspeeds, 1)
-  ft2 <- descLinePlotter(jointspeeds, 2)
-  ft3 <- descLinePlotter(jointspeeds, 3)
-  ft4 <- descLinePlotter(jointspeeds, 4)
-  ft5 <- descLinePlotter(jointspeeds, 5)
-  #ft13 <- descLinePlotter(jointspeeds, 13)
-  ft14 <- descLinePlotter(jointspeeds, 14)
-  ft15 <- descLinePlotter(jointspeeds, 15)
-  ft30 <- descLinePlotter(jointspeeds, 30)
-  ft31 <- descLinePlotter(jointspeeds, 31)
-  ft33 <- descLinePlotter(jointspeeds, 33)
-  ft34 <- descLinePlotter(jointspeeds, 34)
-  ft35 <- descLinePlotter(jointspeeds, 35)
-  ft36 <- descLinePlotter(jointspeeds, 36)
-  ft38 <- descLinePlotter(jointspeeds, 38)
-  ft39 <- descLinePlotter(jointspeeds, 39)
-  ft41 <- descLinePlotter(jointspeeds, 41)
-  ft42 <- descLinePlotter(jointspeeds, 42)
+mapPlots <- function(jointspeeds,ft_group,func){
+  fttypes <- list()
+  if(ft_group == "FT"){
+    fttypes <- list(1,2,3,4,5,14,15,30,31,33,34,35,36,38,39,41,42)
+  } else {
+    fttypes <- list(1,2,3,4,30,40)
+  }
   
-  plots <- list("1_FT_2021" = ft1, "2_FT_2021" = ft2, "3_FT_2021" = ft3,
-                "4_FT_2021" = ft4, "5_FT_2021" = ft5, #"13_FT_2021" = ft13,
-                "14_FT_2021" = ft14, "15_FT_2021" = ft15, "30_FT_2021" = ft30,
-                "31_FT_2021" = ft31, "33_FT_2021" = ft33, "34_FT_2021" = ft34,
-                "35_FT_2021" = ft35, "36_FT_2021" = ft36, "38_FT_2021" = ft38,
-                "39_FT_2021" = ft39, "41_FT_2021" = ft41, "42_FT_2021" = ft42)
-  plots
-}
-
-mapDescScatterPlots <- function(jointspeeds){
-  ft1 <- descScatterPlotter(jointspeeds, 1)
-  ft2 <- descScatterPlotter(jointspeeds, 2)
-  ft3 <- descScatterPlotter(jointspeeds, 3)
-  ft4 <- descScatterPlotter(jointspeeds, 4)
-  ft5 <- descScatterPlotter(jointspeeds, 5)
-  #ft13 <- descScatterPlotter(jointspeeds, 13)
-  ft14 <- descScatterPlotter(jointspeeds, 14)
-  ft15 <- descScatterPlotter(jointspeeds, 15)
-  ft30 <- descScatterPlotter(jointspeeds, 30)
-  ft31 <- descScatterPlotter(jointspeeds, 31)
-  ft33 <- descScatterPlotter(jointspeeds, 33)
-  ft34 <- descScatterPlotter(jointspeeds, 34)
-  ft35 <- descScatterPlotter(jointspeeds, 35)
-  ft36 <- descScatterPlotter(jointspeeds, 36)
-  ft38 <- descScatterPlotter(jointspeeds, 38)
-  ft39 <- descScatterPlotter(jointspeeds, 39)
-  ft41 <- descScatterPlotter(jointspeeds, 41)
-  ft42 <- descScatterPlotter(jointspeeds, 42)
-  
-  plots <- list("1_FT_2021" = ft1, "2_FT_2021" = ft2, "3_FT_2021" = ft3,
-                "4_FT_2021" = ft4, "5_FT_2021" = ft5, #"13_FT_2021" = ft13,
-                "14_FT_2021" = ft14, "15_FT_2021" = ft15, "30_FT_2021" = ft30,
-                "31_FT_2021" = ft31, "33_FT_2021" = ft33, "34_FT_2021" = ft34,
-                "35_FT_2021" = ft35, "36_FT_2021" = ft36, "38_FT_2021" = ft38,
-                "39_FT_2021" = ft39, "41_FT_2021" = ft41, "42_FT_2021" = ft42)
-  plots
-}
-
-mapAveScatterPlots <- function(jointspeeds){
-  ft1 <- aveScatterPlotter(jointspeeds, 1)
-  ft2 <- aveScatterPlotter(jointspeeds, 2)
-  ft3 <- aveScatterPlotter(jointspeeds, 3)
-  ft4 <- aveScatterPlotter(jointspeeds, 4)
-  ft5 <- aveScatterPlotter(jointspeeds, 5)
-  #ft13 <- aveScatterPlotter(jointspeeds, 13)
-  ft14 <- aveScatterPlotter(jointspeeds, 14)
-  ft15 <- aveScatterPlotter(jointspeeds, 15)
-  ft30 <- aveScatterPlotter(jointspeeds, 30)
-  ft31 <- aveScatterPlotter(jointspeeds, 31)
-  ft33 <- aveScatterPlotter(jointspeeds, 33)
-  ft34 <- aveScatterPlotter(jointspeeds, 34)
-  ft35 <- aveScatterPlotter(jointspeeds, 35)
-  ft36 <- aveScatterPlotter(jointspeeds, 36)
-  ft38 <- aveScatterPlotter(jointspeeds, 38)
-  ft39 <- aveScatterPlotter(jointspeeds, 39)
-  ft41 <- aveScatterPlotter(jointspeeds, 41)
-  ft42 <- aveScatterPlotter(jointspeeds, 42)
-  
-  plots <- list("1_FT_2021" = ft1, "2_FT_2021" = ft2, "3_FT_2021" = ft3,
-                "4_FT_2021" = ft4, "5_FT_2021" = ft5, #"13_FT_2021" = ft13,
-                "14_FT_2021" = ft14, "15_FT_2021" = ft15, "30_FT_2021" = ft30,
-                "31_FT_2021" = ft31, "33_FT_2021" = ft33, "34_FT_2021" = ft34,
-                "35_FT_2021" = ft35, "36_FT_2021" = ft36, "38_FT_2021" = ft38,
-                "39_FT_2021" = ft39, "41_FT_2021" = ft41, "42_FT_2021" = ft42)
-  plots
-}
-
-mapErrScatterPlots <- function(jointspeeds){
-  ft1 <- errorScatterPlotter(jointspeeds, 1)
-  ft2 <- errorScatterPlotter(jointspeeds, 2)
-  ft3 <- errorScatterPlotter(jointspeeds, 3)
-  ft4 <- errorScatterPlotter(jointspeeds, 4)
-  ft5 <- errorScatterPlotter(jointspeeds, 5)
-  #ft13 <- errorScatterPlotter(jointspeeds, 13)
-  ft14 <- errorScatterPlotter(jointspeeds, 14)
-  ft15 <- errorScatterPlotter(jointspeeds, 15)
-  ft30 <- errorScatterPlotter(jointspeeds, 30)
-  ft31 <- errorScatterPlotter(jointspeeds, 31)
-  ft33 <- errorScatterPlotter(jointspeeds, 33)
-  ft34 <- errorScatterPlotter(jointspeeds, 34)
-  ft35 <- errorScatterPlotter(jointspeeds, 35)
-  ft36 <- errorScatterPlotter(jointspeeds, 36)
-  ft38 <- errorScatterPlotter(jointspeeds, 38)
-  ft39 <- errorScatterPlotter(jointspeeds, 39)
-  ft41 <- errorScatterPlotter(jointspeeds, 41)
-  ft42 <- errorScatterPlotter(jointspeeds, 42)
-  
-  plots <- list("1_FT_2021" = ft1, "2_FT_2021" = ft2, "3_FT_2021" = ft3,
-                "4_FT_2021" = ft4, "5_FT_2021" = ft5, #"13_FT_2021" = ft13,
-                "14_FT_2021" = ft14, "15_FT_2021" = ft15, "30_FT_2021" = ft30,
-                "31_FT_2021" = ft31, "33_FT_2021" = ft33, "34_FT_2021" = ft34,
-                "35_FT_2021" = ft35, "36_FT_2021" = ft36, "38_FT_2021" = ft38,
-                "39_FT_2021" = ft39, "41_FT_2021" = ft41, "42_FT_2021" = ft42)
-  plots
+  ftplots <- list()
+  for (f in 1:length(fttypes)){
+    ftplots[[f]] = func(jointspeeds,ft_group,fttypes[[f]])
+    #ftplots[[f]] = errorScatterPlotter(joint_estimated_speeds,"FT_2019",fttypes[[f]])
+  }
+  listPlots(ftplots,ft_group)
 }
 
 makePNGs <- function(plots, location){
@@ -162,13 +83,41 @@ makePNGs <- function(plots, location){
   pwalk(list(file_names, plots),ggsave,width=8,height=6, path = location)
 }
 
+listPlots <- function(ftplots, ft_group){
+  if(ft_group == "FT"){
+    list("1_FT_2019" = ftplots[[1]], "2_FT_2019" = ftplots[[2]], "3_FT_2019" = ftplots[[3]],
+         "4_FT_2019" = ftplots[[4]], "5_FT_2019" = ftplots[[5]], #"13_FT_2019" = ftplots[[1]],
+         "14_FT_2019" = ftplots[[6]], "15_FT_2019" = ftplots[[7]], "30_FT_2019" = ftplots[[8]],
+         "31_FT_2019" = ftplots[[9]], "33_FT_2019" = ftplots[[10]], "34_FT_2019" = ftplots[[11]],
+         "35_FT_2019" = ftplots[[12]], "36_FT_2019" = ftplots[[13]], "38_FT_2019" = ftplots[[14]],
+         "39_FT_2019" = ftplots[[15]], "41_FT_2019" = ftplots[[16]], "42_FT_2019" = ftplots[[17]])
+  } else{
+    list("1_FT_2019" = ftplots[[1]], "2_FT_2019" = ftplots[[2]], "3_FT_2019" = ftplots[[3]],
+         "4_FT_2019" = ftplots[[4]], "30_FT_2019" = ftplots[[5]], "40_FT_2019" = ftplots[[6]])
+  }
+}
 
-descLinePlotter <- function(jointspeeds, FTNUM){
-  jointspeeds2 <- jointspeeds %>% 
-    filter(FT_2021 == as.numeric(FTNUM)) %>% as.tibble()  %>%
-    select(link_id,link_seq,FT_2021,FT_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
-    pivot_longer(!c(link_id,FT_2021,FT_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
-    arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+
+descLinePlotter <- function(jointspeeds, ft_group, FTNUM){
+  jointspeeds2 <- if(ft_group == "FT"){
+    jointspeeds %>% 
+      filter(FT_2019 == FTNUM) %>% as.tibble()  %>%
+      select(link_id,link_seq,FT_2019,FT_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
+      pivot_longer(!c(link_id,FT_2019,FT_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
+      arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+  } else{
+    jointspeeds %>% 
+      filter(FTG_2019 == FTNUM) %>% as.tibble()  %>%
+      select(link_id,link_seq,FTG_2019,FTG_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
+      pivot_longer(!c(link_id,FTG_2019,FTG_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
+      arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+  }
+  
+  ftTitle <- if(ft_group == "FT"){
+    jointspeeds2$FT_Name[1]
+  } else{
+    jointspeeds2$FTG_Name[1]
+  }
   
   ggplot(jointspeeds2, aes(x = link_seq, y = Speed, fill = Type))+
     facet_wrap(~MODE_Name, scales = "free") +
@@ -178,18 +127,32 @@ descLinePlotter <- function(jointspeeds, FTNUM){
     scale_color_manual(values = c("red", "blue")) +
     scale_fill_manual(values = c("red", "blue")) +
     xlab("Links by Descending Modeled Speed") + ylab("Speed (mph)") +
-    ggtitle(paste0("Bus Speeds Comparison for '",jointspeeds2$FT_Name[1], "' by Mode")) +
+    ggtitle(paste0("Bus Speeds Comparison for '",ftTitle, "' by Mode")) +
     theme()+
     theme_bw()
 }
 
 
-descScatterPlotter <- function(jointspeeds,FTNUM){
-  jointspeeds2 <- jointspeeds %>% 
-    filter(FT_2021 == FTNUM) %>% as.tibble()  %>%
-    select(link_id,link_seq,FT_2021,FT_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
-    pivot_longer(!c(link_id,FT_2021,FT_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
-    arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+descScatterPlotter <- function(jointspeeds,ft_group,FTNUM){
+  jointspeeds2 <- if(ft_group == "FT"){
+    jointspeeds %>% 
+      filter(FT_2019 == FTNUM) %>% as.tibble()  %>%
+      select(link_id,link_seq,FT_2019,FT_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
+      pivot_longer(!c(link_id,FT_2019,FT_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
+      arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+  } else{
+    jointspeeds %>% 
+      filter(FTG_2019 == FTNUM) %>% as.tibble()  %>%
+      select(link_id,link_seq,FTG_2019,FTG_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
+      pivot_longer(!c(link_id,FTG_2019,FTG_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
+      arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+  }
+  
+  ftTitle <- if(ft_group == "FT"){
+    jointspeeds2$FT_Name[1]
+  } else{
+   jointspeeds2$FTG_Name[1]
+  }  
   
   ggplot(jointspeeds2)+
     facet_wrap(~MODE_Name, scales = "free") +
@@ -201,52 +164,92 @@ descScatterPlotter <- function(jointspeeds,FTNUM){
     scale_color_manual(values = c("red", "blue")) +
     scale_fill_manual(values = c("red", "blue")) +
     xlab("Links by Descending Modeled Speed") + ylab("Speed (mph)") +
-    ggtitle(paste0("Bus Speeds Comparison for '",jointspeeds2$FT_Name[1], "' by Mode")) +
+    ggtitle(paste0("Bus Speeds Comparison for '",ftTitle, "' by Mode")) +
     theme()+
     theme_bw()
 }
 
-aveScatterPlotter <- function(jointspeeds,FTNUM){
-  jointspeeds2 <- jointspeeds %>% 
-    filter(FT_2021 == FTNUM) %>% as.tibble()  %>%
-    select(link_id,link_seq,FT_2021,FT_Name,MODE,MODE_Name,Observed,Modeled)
+aveScatterPlotter <- function(jointspeeds,ft_group,FTNUM){
+  jointspeeds2 <- if(ft_group == "FT"){
+    jointspeeds %>% 
+    filter(FT_2019 == FTNUM) %>% as.tibble()  %>%
+    select(link_id,link_seq,FT_2019,FT_Name,MODE,MODE_Name,Observed,Modeled)
+  } else {
+    jointspeeds %>% 
+      filter(FTG_2019 == FTNUM) %>% as.tibble()  %>%
+      select(link_id,link_seq,FTG_2019,FTG_Name,MODE,MODE_Name,Observed,Modeled)
+  }
   
-  ggplot(jointspeeds2)+
+  ftTitle <- if(ft_group == "FT"){
+    jointspeeds2$FT_Name[1]
+  } else{
+    jointspeeds2$FTG_Name[1]
+  }
+  
+  facetlims <- if(ft_group == "FT"){
+    jointspeeds2 %>% as.tibble() %>%
+    group_by(MODE_Name) %>% 
+    summarise(min = 0, max = max(Observed, Modeled)) %>%
+    gather(range, Observed, -c(MODE_Name)) %>%
+    mutate(Modeled = Observed, range = NULL)
+  } else{
+    jointspeeds2 %>% as.tibble() %>%
+      group_by(MODE_Name) %>% 
+      summarise(min = 0, max = max(Observed, Modeled)) %>%
+      gather(range, Observed, -c(MODE_Name)) %>%
+      mutate(Modeled = Observed, range = NULL)
+  }
+  
+  ggplot(jointspeeds2,aes(x = Modeled, y = Observed))+
+    geom_point(aes(color = "Observed"), alpha = 1) +
     facet_wrap(~MODE_Name, scales = "free") +
+    geom_blank(data = facetlims) +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-    geom_point(aes(x = Modeled, y = Observed,color = "Observed"), alpha = 1) +
-    geom_line(aes(x = Modeled, y = Modeled,color = "Modeled"), alpha = 1, size = 1) +
-    scale_color_manual(values = c("blue", "pink")) +
+    geom_abline(intercept = 0, slope = 1, alpha = 1, size = .5, color = "blue") +
+    scale_color_manual(values = c("lightcoral")) +
     guides(color = guide_legend(title = "Type")) +
     ggnewscale::new_scale_color() +
-    geom_smooth(method = "lm",se = F,aes(x = Modeled, y = Observed, color = "Observed"), alpha = 1, size = 1, linetype = "longdash") +
+    geom_smooth(method = "lm",formula=y~x+0,fullrange = T,se = F,aes(color = "Observed"), alpha = 1, size = 1, linetype = "longdash") +
     scale_color_manual(values = c("red")) +
     guides(fill = guide_legend(override.aes = list(color = NA)), color = FALSE, shape = FALSE) +
     xlab("TDM Modeled Speed (mph)") + ylab("UTA Observed Speed (mph)") +
-    ggtitle(paste0("Bus Speeds Comparison for '",jointspeeds2$FT_Name[1], "' by Mode")) +
+    ggtitle(paste0("Bus Speeds Comparison for '",ftTitle, "' by Mode")) +
     theme()+
     theme_bw()
 }
 
-errorScatterPlotter <- function(jointspeeds,FTNUM){
-  jointspeeds2 <- jointspeeds %>% 
-    filter(FT_2021 == FTNUM) %>% as.tibble()  %>%
-    select(link_id,link_seq,FT_2021,FT_Name,MODE,MODE_Name,Observed,Modeled,PercentError)
+errorScatterPlotter <- function(jointspeeds,ft_group,FTNUM){
+  jointspeeds2 <- if(ft_group == "FT"){
+    jointspeeds %>% 
+      filter(FT_2019 == FTNUM) %>% as.tibble()  %>%
+      select(link_id,link_seq,FT_2019,FT_Name,FTG_Name,MODE,MODE_Name,Observed,Modeled,PercentError)
+  } else {
+    jointspeeds %>% 
+      filter(FTG_2019 == FTNUM) %>% as.tibble()  %>%
+      select(link_id,link_seq,FTG_2019,FT_Name,FTG_Name,MODE,MODE_Name,Observed,Modeled,PercentError)
+  }
   
-  ggplot(jointspeeds2)+
+  ftTitle <- if(ft_group == "FT"){
+    jointspeeds2$FT_Name[1]
+  } else{
+    jointspeeds2$FTG_Name[1]
+  }
+  
+  ggplot(jointspeeds2) +
     facet_wrap(~MODE_Name, scales = "free_x") +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
     geom_point(aes(x = Modeled, y = PercentError*100,color = "Observed"), alpha = 1) +
     scale_color_manual(values = c("lightcoral")) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "blue", size = 1) +
     xlab("TDM Modeled Speed (mph)") + ylab("Percent Error of UTA Observed Speed") +
-    ggtitle(paste0("UTA Bus Speeds Percent Error for '",jointspeeds2$FT_Name[1], "' by Mode")) +
+    ggtitle(paste0("UTA Bus Speeds Percent Error for '",ftTitle, "' by Mode")) +
     scale_color_discrete(guide="none") +
     theme_bw()
 }
 
 
-
-
+#test <- errorScatterPlotter(joint_estimated_speeds,FTG_2019,"FTG",30)
+#test2 <- mapPlots(joint_estimated_speeds,FTG_2019,"FTG",errorScatterPlotter)
+#test
 
 

@@ -1,10 +1,15 @@
 # Create Spatial Objects-------------------------------------------------------------#
 # read in TDM Network shapefile
-get_tdm_segments <- function(shp){
+get_tdm_segments <- function(shp, loadednet){
+  loadednet_select <- read.dbf(loadednet) %>%
+    mutate(link_id = paste0(A,"_",B)) %>%
+    select(link_id, AREATYPE)
+  
   st_read(shp) %>%
-    select(A,B, FT_2021) %>%
     #create link id composed of start and end nodes
     mutate(link_id = paste0(A,"_",B)) %>%
+    left_join(loadednet_select, by = c("link_id")) %>%
+    select(A,B, FT_2019, AREATYPE, link_id) %>%
     st_as_sf()
 }
 
@@ -129,7 +134,7 @@ mapable_uta_points <- function(uta_points){
 #' easier to understand and manipulate  
 clean_centroids <- function(tdm_centroids){
   tdm_centroids %>%
-    select(centroid_id,link_id,A.x,B.x,MODE,LabelNum,Label,ONEWAY,LINKSEQ1,LINKSEQ2,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,midlinep, FT_2021)
+    select(centroid_id,link_id,A.x,B.x,MODE,LabelNum,Label,ONEWAY,LINKSEQ1,LINKSEQ2,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,midlinep, FT_2019, AREATYPE)
 } 
 
 
@@ -277,7 +282,7 @@ estimated_segment_speeds <- function(segment_speeds, tdm_segments){
     fill(DIR, PkOk) %>%
     #' use AvgSpeed when AvgDwellSpeed is 0  
     mutate(EstAvgmphdwell = ifelse(EstAvgmphdwell == 0, EstAvgmph,EstAvgmphdwell)) %>%
-    select(centroid_id,link_id,A.x,B.x,Label,LabelNum,MODE,FT_2021,ONEWAY,LINKSEQ1,LINKSEQ2,DIR,tdmDir,PkOk,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,EstAvgmphdwell)
+    select(centroid_id,link_id,A.x,B.x,Label,LabelNum,MODE,FT_2019,AREATYPE,ONEWAY,LINKSEQ1,LINKSEQ2,DIR,tdmDir,PkOk,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,EstAvgmphdwell)
   
   #' shift centroid spatial object to link spatial object
   #' also calculate the speed ratio
