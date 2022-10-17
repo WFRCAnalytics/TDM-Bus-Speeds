@@ -137,6 +137,14 @@ clean_centroids <- function(tdm_centroids){
     select(centroid_id,link_id,A.x,B.x,MODE,LabelNum,Label,ONEWAY,LINKSEQ1,LINKSEQ2,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,midlinep, FT_2019, AREATYPE)
 } 
 
+clean_centroids2 <- function(tdm_centroids){
+  tdm_centroids %>%
+    select(centroid_id,link_id,A.x,B.x,MODE,LabelNum,Label,ONEWAY,LINKSEQ1,LINKSEQ2,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,midlinep, FT_2019, AREATYPE, compass) %>%
+    mutate(long = unlist(map(tdm_centroids$midlinep,1)),
+           lat = unlist(map(tdm_centroids$midlinep,2)))
+} 
+
+
 
 #DATA ANALYSIS ------------------------------------------------------------------------------------#
 #' filters out all uta stops that aren't within designated buffer area

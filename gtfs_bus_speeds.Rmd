@@ -1,0 +1,280 @@
+---
+title: "UTA Bus Speeds using GTFS"
+output: html_document
+author: Chris Day
+date: '2022-10-12'
+---
+# r is the best {.tabset}
+
+```{r libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(sf)
+library(gtfstools)
+library(gtfs2gps)
+library(leaflet)
+library(hms)
+library(geotidy)
+library(sfheaders)
+library(targets)
+```
+
+## Introduction 
+This Rmarkdown is for extracting bus speeds from GTFS data in order to map it to the travel demand model (TDM) network links. By mapping bus speeds to the link segments in the TDM network, we hope to verify the bus speed ratios currently being used for determining the bus speeds in the TDM. The bus speed ratios represent a ratio of link car travel speed by functional classification and bus type mode. 
+
+A previous analysis has already been completed, but the results were inconclusive. That analysis used UTA bus stop point data and didn't provide any clear evidence on the validity of the speed ratios currently in use. For this reason, we are completed a secondary analysis using a separate dataset. 
+
+### Current Ratios
+The current ratios being used to determining TDM bus travel speeds are as follows:
+
+| Functional Class                  | Auto Speed Ratio |
+|-----------------------------------|------------------|
+| Freeways                          | 0.95             |
+| Freeway Ramps                     | 0.75             |
+| Principal Arterials & Expressways | 0.60             |
+| Minor Arterials (Urban)           | 0.55             |
+| Minor Arterials (Suburban)        | 0.65             |
+| Collectors                        | 0.60             |
+*minimum bus speed = 10mph
+
+## GTFS Data Analysis
+
+### Input GTFS Data
+Below we read in the GTFS data from the 9 September 2019 dataset located at this link: https://transitfeeds.com/p/utah-transportation-authority/59?p=10. 
+
+```{r gtfs}
+#read in gtfs data
+gtfs_path <- "C:/Users/cday/Documents/projects/TDM-Bus-Speeds/data/UTA/gtfs.zip"
+uta_gtfs <- gtfstools::read_gtfs(gtfs_path)
+```
+
+```{r gtfsbreakdown, include=FALSE}
+#create data tables of gtfs data
+trips <- uta_gtfs$trips
+routes <- uta_gtfs$routes
+stops_times <- uta_gtfs$stop_times
+calendar_dates <- uta_gtfs$calendar_dates
+```
+
+### Average Speed Calculation
+Next we calculate the average speeds based on the daily time schedules and link shape distances. The R package *gtfs2gps* has a built in function to do that for us. After creating a data frame with average speeds we create point and line spatial objects that include speed data.
+
+```{r gps}
+#calculate average speeds, times, etc.
+uta_gps <- tar_read(gtfs_gps)
+# Results:
+#   356 out of 534 shapes (66.67%) were properly processed.
+#   15818 out of 16234 trips (97.44%) were properly processed.
+
+# create point and line datasets
+#uta_gps_points <- gps_as_sfpoints(uta_gps)
+uta_gps_lines <- tar_read(gtfs_gps_lines)
+```
+
+After creating a line spatial data frame with speed data included, we join on the trip and the route datasets by trip id. We then calculate a timestamp value, which represents the amount of time it takes to get from one stop to another. We then filter the data set to only include peak times (6:00am to 9:00am) and off-peak times (9:00am to 2:00pm). We also calculate a cumalitive time (time it takes to get to a stop from the beginning of the route) for routes where that value was not previously calculated in the previous task where speed data was also calculated.
+
+```{r gpspeak}
+# merge route name, dir, and other info onto geometry data
+uta_gps_lines_arr <- tar_read(triproutes)
+
+#' get timestamp data for each trip and route
+#' determine peak and off peak times
+uta_gps_lines_atr <- tar_read(timepeaks)
+```
+
+Next, we filter by service_id to only include those data points recorded on a weekday (Monday thru Friday). 
+
+```{r gpsdays}
+uta_gps_lines_mf <- tar_read(gps_lines_mf)
+```
+
+Finally, a summary table is created where the average, average speeds are taken for the peak and off peak periods, by direction, for each route. The mean distance and mean timepoints are also calculated, in case the average speeds are to be calculated once more.
+
+```{r speeds}
+uta_gps_lines_mf_sum <- tar_read(speed_sums)
+head(uta_gps_lines_mf_sum)
+```
+
+### Test Map
+Below is a test map to verify that our analysis worked. Let's take a look at route 11, during the off-peak hours, in the 0 direction. 
+
+```{r testmap}
+dir <- 0
+route <- "11"
+period <- "ok"
+uta_gps_filtered <- uta_gps_lines_mf_sum %>%
+  filter(route_short_name == route,
+         PkOk == period,
+         direction_id == dir)
+
+leaflet(uta_gps_filtered) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolylines(
+    data = uta_gps_filtered$geometry
+  )
+```
+
+Notice that in the map, the each individual line is actually a polyline. The individual segments are joined together. This will be a problem later.
+
+### Indivdual Segments
+Here, we break up the polylines into individual segments. This was a very difficult process, but we stored all the steps in the st_make_segments function. After doing it, we show another test map verifying that it worked!
+
+```{r testmap2}
+uta_gps_segments <- tar_read(segments)
+
+uta_segments_test <- uta_gps_segments %>%
+  filter(route_short_name == route,
+         PkOk == period,
+         direction_id == dir)
+
+leaflet(uta_segments_test) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolylines(
+    data = uta_segments_test$line
+  )
+```
+
+### Compass Direction
+Now that each segment is a small straight line, we can add a compass direction to every segment. This compass direction is crucial to joining with the TDM link data.
+
+```{r compass}
+uta_segments_compass <- tar_read(geosphere)
+head(uta_segments_compass)
+```
+
+```{r compassmap, include=FALSE}
+#leaflet(uta_segments_compass) %>%
+#  addProviderTiles(providers$CartoDB.Positron) %>%
+#  addPolylines(
+#    data = uta_segments_compass$line,
+#    popup = paste("DIR:", uta_segments_compass$compass, "<br>",
+#                  "uniquerow:", uta_segments_compass$uniquerow)
+#  )
+```
+
+## TDM Data Analysis
+### Connect GTFS routes with TDM routes
+We forgot to put a label identifier to be able to compare routes together within the GTFS route. So quickly, we do that here.
+
+```{r gtfsroutes}
+uta_compass_tdm_r <- tar_read(gtfs_tdm_routes)
+```
+
+### Add Compass Direction to TDM Links
+On the previous analysis we joined the UTA stop points with the TDM network without using compass direction. To make this analysis more accurate, we will join by compass direction. Therefore, we must update the TDM link spatial dataset to include compass direction.
+
+```{r tdmcompass}
+tdm_transit_lines <- tar_read(tdm_transit_lines)
+tdm_compass <- tar_read(tdm_lines_compass)
+```
+
+### Create Centroid Dataset
+Below we create a centroid spatial dataset with link ids, to allow us to merge back into the link spatial dataset.
+
+```{r tdmcentroid}
+tdm_centroids_compass <- tar_read(tdm_centroids_compass)
+tdm_centroids_clean2 <- tar_read(tdm_centroids_clean2)
+```
+
+## Join TDM and GTFS Data
+First we filter the GTFS data and TDM data by route, period, direction, and compass direction. On that level of detail, we then determine the closest line segment to each TDM centroid, and steal its average speed value. After every TDM centroid has a value, we merge the TDM centroid to the corresponding TDM link to get speed data by link. With that information, we can create maps/graphs to compare the current bus speeds with the GTFS speeds.
+
+```{r}
+joint_gtfs_points <- tar_read(join_tdm_gtfs)
+joint_gtfs_lines <- tar_read(merge_tdm_lines)
+```
+
+
+```{r}
+route <- 62
+period <- "pk"
+
+gtfs_test <- uta_compass_tdm_r %>%
+  filter(LabelNum == route,
+         PkOk == period)
+jpoint_test <- joint_gtfs_points %>%
+  filter(LabelNum == route,
+         PkOk == period) 
+jline_test <- joint_gtfs_lines %>%
+  filter(LabelNum == route,
+         PkOk == period)
+```
+
+
+```{r}
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolylines(
+    data = gtfs_test$line,
+    popup = paste("DIR:", gtfs_test$compass, "<br>",
+                  "Ave Speed", gtfs_test$aveSpeed, "<br>",
+                  "Dist", jpoint_test$dist)
+  ) %>%
+  addCircleMarkers(lng = jpoint_test$long, 
+      lat = jpoint_test$lat,
+    popup = paste("DIR:", jpoint_test$compass, "<br>",
+                  "Ave Speed", jpoint_test$aveSpeed, "<br>",
+                  "Dist", jpoint_test$dist),
+    color = "red"
+  ) 
+
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolylines(
+    data = gtfs_test$line,
+    popup = paste("DIR:", gtfs_test$compass, "<br>",
+                  "Ave Speed", gtfs_test$aveSpeed, "<br>",
+                  "Dist", jpoint_test$dist)
+  ) %>%
+  addPolylines(
+    data = jline_test$geometry,
+    popup = paste("DIR:", jline_test$compass, "<br>",
+                  "Ave Speed", jline_test$aveSpeed, "<br>",
+                  "Dist", jline_test$dist),
+    color = "red"
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+final_uta_maptest <- uta_tdm_pk
+
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolylines(
+    data = uta_compass1$line,
+    popup = paste("DIR:", uta_compass1$compass, "<br>",
+                  "uniquerow:", uta_compass1$uniquerow)
+  ) 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

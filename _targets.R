@@ -8,11 +8,21 @@ library(leaflet)
 library(mapview)
 library(RColorBrewer)
 library(rgdal)
+library(gtfstools)
+library(gtfs2gps)
+library(hms)
+library(geotidy)
+library(sfheaders)
 
 
+# Source Scripts for All Analyses
 source("R/bus_speeds.R")
 source("R/bus_speeds_visuals.R")
+source("R/gtfs_functions.R")
 
+#####################################################################################################################################################################################################
+# Primary Analysis # UTA Bus Stop Points #
+#####################################################################################################################################################################################################
 
 data_targets <- tar_plan(
   #Read in Data
@@ -40,7 +50,6 @@ data_targets <- tar_plan(
   tar_target(tdm_centroids_clean, clean_centroids(tdm_centroids)),
   tar_target(uta_map_points, mapable_uta_points(uta_points_clean_fixed))
 )
-
 
 analysis_targets <- tar_plan(
   # Filter UTA Stops based on distance from TDM
@@ -86,8 +95,6 @@ analysis_targets <- tar_plan(
 )
 
 visual_targets<- tar_plan(
-  
-  
   #' create visual plots to understand how UTA observed speeds compare with TDM modeled speeds
   tar_target(joint_estimated_speeds, join_estimated_speeds(pk_0_estimated_speeds, pk_1_estimated_speeds, ok_0_estimated_speeds, ok_1_estimated_speeds, FTG_2019)), # FT_2019 or FTG_2019
   tar_target(descLineGraphs, mapPlots(joint_estimated_speeds, "FTG", descLinePlotter)),
@@ -96,19 +103,61 @@ visual_targets<- tar_plan(
   tar_target(errScatterPlots, mapPlots(joint_estimated_speeds, "FTG", errorScatterPlotter))
 )
 
+#descLineGraphs <- tar_read(descLineGraphs)
+#makePNGs(descLineGraphs, "outputs/DescendingSpeeds_Exact")
+#descScatterPlots <- tar_read(descScatterPlots)
+#makePNGs(descScatterPlots, "outputs/DescendingSpeeds_Average")
+#aveScatterPlots <- tar_read(aveScatterPlots)
+#makePNGs(aveScatterPlots, "outputs/ScatterPlotSpeeds_Average")
+#errScatterPlots <- tar_read(errScatterPlots)
+#makePNGs(errScatterPlots, "outputs/ScatterPlotSpeeds_Error")
 
-tar_plan(
-  data_targets,
-  analysis_targets,
-  visual_targets
+
+#####################################################################################################################################################################################################
+# Secondary Analysis # GTFS Stop Schedule Data #
+#####################################################################################################################################################################################################
+
+gtfs_targets <- tar_plan(
+  tar_target(gtfs_path, "C:/Users/cday/Documents/projects/TDM-Bus-Speeds/data/UTA/gtfs.zip"),
+  tar_target(uta_gtfs, gtfstools::read_gtfs(gtfs_path)),
+  tar_target(gtfs_gps, gtfs2gps(uta_gtfs, spatial_resolution = 100)),
+  tar_target(gtfs_gps_lines, gps_as_sflinestring(gtfs_gps)),
+  
+  tar_target(trips, uta_gtfs$trips),
+  tar_target(routes, uta_gtfs$routes),
+  tar_target(triproutes, merge_trip_routes(gtfs_gps_lines,trips,routes)),
+  tar_target(timepeaks, calculate_time_peak(triproutes)),
+  tar_target(mflines, c("1004","12704","13304","210704","24904","128004","142204","340904","504","150804","4", "17")),
+  tar_target(gps_lines_mf, filter_lines(timepeaks,mflines)),
+  tar_target(speed_sums, summarize_speeds(gps_lines_mf)),
+  tar_target(segments, st_make_segments(speed_sums)),
+  tar_target(geosphere, calculate_gtfs_compass(segments)),
+  
+  tar_target(gtfs_tdm_routes, left_join(geosphere,tdm_uta_conversion, by = c("route_short_name" = "GTFSRoute"))),
+  tar_target(tdm_lines_compass, calculate_tdm_compass(tdm_transit_lines)),
+  tar_target(tdm_centroids_compass, make_centroids(tdm_lines_compass)),
+  tar_target(tdm_centroids_clean2, clean_centroids2(tdm_centroids_compass)),
+  
+  tar_target(join_tdm_gtfs, join_gtfs(gtfs_tdm_routes,tdm_centroids_clean2)),
+  tar_target(merge_tdm_lines, merge_tdm_links(join_tdm_gtfs,tdm_lines_compass))
+  
+  
+  
+  
+  
 )
 
-descLineGraphs <- tar_read(descLineGraphs)
-makePNGs(descLineGraphs, "outputs/DescendingSpeeds_Exact")
-descScatterPlots <- tar_read(descScatterPlots)
-makePNGs(descScatterPlots, "outputs/DescendingSpeeds_Average")
-aveScatterPlots <- tar_read(aveScatterPlots)
-makePNGs(aveScatterPlots, "outputs/ScatterPlotSpeeds_Average")
-errScatterPlots <- tar_read(errScatterPlots)
-makePNGs(errScatterPlots, "outputs/ScatterPlotSpeeds_Error")
+
+
+
+tar_plan(
+  
+  data_targets,
+  analysis_targets,
+  visual_targets,
+  
+  gtfs_targets
+  
+)
+
 
