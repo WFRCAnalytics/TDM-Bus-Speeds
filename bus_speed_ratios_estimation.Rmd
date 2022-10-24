@@ -742,11 +742,39 @@ ratios3graph  +
   geom_line()
 ```
 
-### Step Five -- Mathematically Smooth Lines
+### Step Five -- Change FT-Collectors & Locals
+Looking at the manually adjusted lines, the S-type curve shown in the FT-Collectors & Locals doesn't make a lot of sense. Lets make one more additional manual adjustment where we force this group to follow the same pattern as the minor arterials and principal arterials / expressways.
+
+```{r ratios32, include = FALSE, warning= FALSE, message = FALSE}
+ratioTable3.2 <- ratioTable3 %>%
+  mutate(ratio3 = case_when(
+    rownum == 2 ~ 0.65,
+    rownum == 4 ~ 0.6,
+    rownum == 22 ~ 0.64,
+    rownum == 24 ~ 0.59,
+    rownum == 42 ~ 0.66,
+    rownum == 44 ~ 0.61,
+    TRUE ~ ratio3
+  ))
+```
+
+```{r ratios32graph, echo = FALSE, message = FALSE, warning = FALSE, out.width="100%"}
+ratios3.2graph <- ggplot(ratioTable3.2) +
+  aes(x = areaNum, y = ratio3, color = FTGROUP) +
+  facet_wrap(~PkOk)+
+  geom_point(size = 2)+ 
+  scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
+  theme_bw()
+ratios3.2graph  +
+  geom_line()
+```
+
+
+### Step Six -- Mathematically Smooth Lines
 Now that we have some pretty smooth lines through some manual adjustment, lets mathematically smoothen them a little more through a mathematical program. 
 
 ```{r ratios4graph, echo = FALSE, message = FALSE, warning = FALSE, out.width="100%"}
-ratios4graph <- ratios3graph + stat_smooth(method = "lm", formula = y ~ poly(x,3), se = FALSE)
+ratios4graph <- ratios3.2graph + stat_smooth(method = "lm", formula = y ~ poly(x,3), se = FALSE)
 ratios4graph
 ```
 ```{r statsmoothdata, message = FALSE, warning = FALSE, include = FALSE}
