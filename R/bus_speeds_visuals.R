@@ -1,10 +1,14 @@
 
 # Visual Objects ------------------------------------------------------------------#
-join_estimated_speeds <- function(pk_0_es, pk_1_es, ok_0_es, ok_1_es, ft_grouping_col){
+join_estimated_speeds <- function(pk_0_es, pk_1_es, ok_0_es, ok_1_es){
   bind_rows(pk_0_es, pk_1_es, ok_0_es, ok_1_es) %>%
     filter(!is.na(EstAvgmphdwell) & !is.na(ModelSpeed)) %>%
     rename("Modeled" = ModelSpeed, "Observed" = EstAvgmphdwell )%>%
-    mutate(Modeled = ifelse(is.na(Modeled),P_SPEED1,Modeled)) %>%
+    mutate(Modeled = ifelse(is.na(Modeled),P_SPEED1,Modeled))
+}
+  
+mutate_joint_speeds <- function(joint_speeds,ft_grouping_col){  
+  joint_speeds %>%
     mutate(
       MODE_Name = case_when(
         MODE == 4 ~ "4-Local Bus",

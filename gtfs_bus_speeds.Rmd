@@ -16,9 +16,12 @@ library(hms)
 library(geotidy)
 library(sfheaders)
 library(targets)
+source("R/bus_speeds_visuals.R")
+source("R/gtfs_functions.R")
 ```
 
 ## Introduction 
+### Introduction
 This Rmarkdown is for extracting bus speeds from GTFS data in order to map it to the travel demand model (TDM) network links. By mapping bus speeds to the link segments in the TDM network, we hope to verify the bus speed ratios currently being used for determining the bus speeds in the TDM. The bus speed ratios represent a ratio of link car travel speed by functional classification and bus type mode. 
 
 A previous analysis has already been completed, but the results were inconclusive. That analysis used UTA bus stop point data and didn't provide any clear evidence on the validity of the speed ratios currently in use. For this reason, we are completed a secondary analysis using a separate dataset. 
@@ -66,11 +69,11 @@ uta_gps <- tar_read(gtfs_gps)
 #   15818 out of 16234 trips (97.44%) were properly processed.
 
 # create point and line datasets
-#uta_gps_points <- gps_as_sfpoints(uta_gps)
 uta_gps_lines <- tar_read(gtfs_gps_lines)
+#uta_gps_points <- tar_read(gtfs_gps_points)
 ```
 
-After creating a line spatial data frame with speed data included, we join on the trip and the route datasets by trip id. We then calculate a timestamp value, which represents the amount of time it takes to get from one stop to another. We then filter the data set to only include peak times (6:00am to 9:00am) and off-peak times (9:00am to 2:00pm). We also calculate a cumalitive time (time it takes to get to a stop from the beginning of the route) for routes where that value was not previously calculated in the previous task where speed data was also calculated.
+After creating a line spatial data frame with speed data included, we join on the trip and the route datasets by trip id. We then calculate a timestamp value, which represents the amount of time it takes to get from one stop to another. We then filter the data set to only include peak times (6:00am to 9:00am) and off-peak times (9:00am to 2:00pm). We also calculate a cumulative time (time it takes to get to a stop from the beginning of the route) for routes where that value was not previously calculated in the previous task where speed data was also calculated.
 
 ```{r gpspeak}
 # merge route name, dir, and other info onto geometry data
@@ -94,23 +97,81 @@ uta_gps_lines_mf_sum <- tar_read(speed_sums)
 head(uta_gps_lines_mf_sum)
 ```
 
+### Verifying Average Speeds
+The average speeds are calculated as explained in this link: (https://ipeagit.github.io/gtfs2gps/articles/intro_to_gtfs2gps.html). Since this task was to calculate speeds based on scheduled stop times using GTFS data, we verify that the average speeds already calculated are sufficient.
+
+```{r speedv}
+uta_gps_lines_mf_v <- uta_gps_lines_mf_sum %>%
+  mutate(aveSpeed = as.numeric(aveSpeed)*0.621371,
+         length = st_length(geometry)) %>%
+  mutate(scheduledAveSpeed = as.numeric((length/aveTimepoint)*2.23694))
+
+mismatched5 <- uta_gps_lines_mf_v %>%
+  mutate(speeddif = abs(aveSpeed - scheduledAveSpeed)) %>%
+  filter(speeddif >= 5)
+mismatched3 <- uta_gps_lines_mf_v %>%
+  mutate(speeddif = abs(aveSpeed - scheduledAveSpeed)) %>%
+  filter(speeddif >= 3)
+mismatched1 <- uta_gps_lines_mf_v %>%
+  mutate(speeddif = abs(aveSpeed - scheduledAveSpeed)) %>%
+  filter(speeddif >= 1)
+nrow(mismatched5)
+nrow(mismatched3)
+nrow(mismatched1)
+```
+In the code above, we recalculate the average speed value by dividing a new distance value by the scheduled time it takes to get from one stop to the next. After recalculating average speed, we compare our calculated speed value with the already calculated value. The code above shows that only 73 out of 14,913 stops (0.49%) have a difference of 5mph or greater. Only 96 out of 14,913 stops (0.64%) have a difference of 3mph or greater. Lastly, only 256 out of 14,913 stops have a difference of 1mph or greater(1.7%). With the speed values being so close, we choose to use the default average speed calculation, because as explained in its documentation, it accounts for first and last stops as well as places where data does not exist concretely.
+
+### Stop Locations
+To understand the data a little better, lets create a sptial object of all the stop locations.
+
+```{r stoplocations}
+uta_gps_points <- tar_read(gtfs_gps_points) %>%
+  filter(!is.na(stop_id)) %>%
+  merge_trip_routes(trips,routes)
+
+mflines <- tar_read(mflines)
+
+uta_gps_points_s <- uta_gps_points %>%
+  mutate(startHour = as.numeric(substr(timestamp,1,2)),
+         rownum = row_number()) %>%
+    mutate(firstStartHour = ifelse(rownum == 1, startHour, NA)) %>%
+    fill(firstStartHour, .direction = "down") %>%
+    mutate(PkOk = ifelse(firstStartHour %in% c(6:8), "pk", ifelse(firstStartHour %in% c(9:14), "ok", "other"))) %>%
+  filter(service_id %in% mflines) %>%
+    ungroup() %>%
+    group_by(route_short_name, PkOk, direction_id, stop_sequence) %>%
+    filter(PkOk != "other") %>%
+    arrange(stop_sequence, timestamp) %>%
+  group_by(route_short_name,PkOk,direction_id,stop_sequence) %>%
+    summarize(aveSpeed = mean(speed))
+```
+
+
 ### Test Map
 Below is a test map to verify that our analysis worked. Let's take a look at route 11, during the off-peak hours, in the 0 direction. 
 
 ```{r testmap}
 dir <- 0
 route <- "11"
-period <- "ok"
+period <- "pk"
 uta_gps_filtered <- uta_gps_lines_mf_sum %>%
   filter(route_short_name == route,
          PkOk == period,
          direction_id == dir)
 
-leaflet(uta_gps_filtered) %>%
+uta_gps_points_filtered <- uta_gps_points_s %>% ungroup()%>%
+  mutate(long = unlist(map(uta_gps_points_s$geometry,1)),
+           lat = unlist(map(uta_gps_points_s$geometry,2))) %>%
+  filter(route_short_name == route,
+         PkOk == period) 
+
+leaflet() %>%
   addProviderTiles(providers$CartoDB.Positron) %>%
   addPolylines(
     data = uta_gps_filtered$geometry
-  )
+  ) %>%
+  addCircleMarkers(lng = uta_gps_points_filtered$long, 
+      lat = uta_gps_points_filtered$lat)
 ```
 
 Notice that in the map, the each individual line is actually a polyline. The individual segments are joined together. This will be a problem later.
@@ -176,16 +237,17 @@ tdm_centroids_clean2 <- tar_read(tdm_centroids_clean2)
 ```
 
 ## Join TDM and GTFS Data
-First we filter the GTFS data and TDM data by route, period, direction, and compass direction. On that level of detail, we then determine the closest line segment to each TDM centroid, and steal its average speed value. After every TDM centroid has a value, we merge the TDM centroid to the corresponding TDM link to get speed data by link. With that information, we can create maps/graphs to compare the current bus speeds with the GTFS speeds.
+### Join TDM and GTFS Data
+First we filter the GTFS data and TDM data by route, period, and compass direction. On that level of detail, we then determine the closest line segment to each TDM centroid, and steal its average speed value. After every TDM centroid has a value, we merge the TDM centroid to the corresponding TDM link to get speed data by link. With that information, we can create maps/graphs to compare the current bus speeds with the GTFS speeds.
 
-```{r}
+```{r joins}
 joint_gtfs_points <- tar_read(join_tdm_gtfs)
 joint_gtfs_lines <- tar_read(merge_tdm_lines)
 ```
 
 
-```{r}
-route <- 62
+```{r testroutes}
+route <- 11
 period <- "pk"
 
 gtfs_test <- uta_compass_tdm_r %>%
@@ -197,10 +259,18 @@ jpoint_test <- joint_gtfs_points %>%
 jline_test <- joint_gtfs_lines %>%
   filter(LabelNum == route,
          PkOk == period)
+
+uta_gps_points_filtered <- uta_gps_points_s %>% ungroup()%>%
+  mutate(long = unlist(map(uta_gps_points_s$geometry,1)),
+           lat = unlist(map(uta_gps_points_s$geometry,2))) %>%
+  filter(route_short_name == jpoint_test$route_short_name,
+         PkOk == period)
+
+nrow(uta_gps_points_filtered)
+nrow(jpoint_test)
 ```
 
-
-```{r}
+```{r testroutemap}
 leaflet() %>%
   addProviderTiles(providers$CartoDB.Positron) %>%
   addPolylines(
@@ -215,7 +285,9 @@ leaflet() %>%
                   "Ave Speed", jpoint_test$aveSpeed, "<br>",
                   "Dist", jpoint_test$dist),
     color = "red"
-  ) 
+  ) %>%
+  addCircleMarkers(lng = uta_gps_points_filtered$long, 
+      lat = uta_gps_points_filtered$lat)
 
 
 leaflet() %>%
@@ -232,42 +304,50 @@ leaflet() %>%
                   "Ave Speed", jline_test$aveSpeed, "<br>",
                   "Dist", jline_test$dist),
     color = "red"
-  )
+  )%>%
+  addCircleMarkers(lng = uta_gps_points_filtered$long, 
+      lat = uta_gps_points_filtered$lat)
 ```
 
 
+## Results
+### Route Results
+In this section we create a route level comparison between TDM speeds and GTFS speeds for the same links. We output 109 route comparison pictures. And example of route 11 is shown below.
 
+```{r routes}
+histo <- tar_read(gtfs_histo_df)
+routeplots <- tar_read(routeplots)
+routeplots[[11]]
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-```{r}
-final_uta_maptest <- uta_tdm_pk
-
-
-leaflet() %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
-  addPolylines(
-    data = uta_compass1$line,
-    popup = paste("DIR:", uta_compass1$compass, "<br>",
-                  "uniquerow:", uta_compass1$uniquerow)
-  ) 
+```{r routepngs, include = FALSE}
+#makePNGs(routeplots, "outputs/GTFS/Routes/")
 ```
 
 
+### Scatter and Descending Plot Results
+Now we create plots comparing the TDM speed with GTFS speed values by functional classification groupings (as shown in the ratio table) and mode. An example is shown below as well.
 
 
+```{r gtfsplotsetup}
+join_gtfs_speeds <- tar_read(joint_gtfs_speeds)
+mutated_gtfs <- tar_read(mutated_gtfs_speeds)
+```
 
 
+```{r gtfsplots}
+g_descLineGraphs <- tar_read(g_descLineGraphs)
+g_descScatterPlots <- tar_read(g_descScatterPlots)
+g_aveScatterPlots <- tar_read(g_aveScatterPlots)
+g_errScatterPlots <- tar_read(g_errScatterPlots)
+
+#makePNGs(g_descLineGraphs, "outputs/GTFS/DescendingSpeeds_Exact")
+#makePNGs(g_descScatterPlots, "outputs/GTFS/DescendingSpeeds_Average")
+#makePNGs(g_aveScatterPlots, "outputs/GTFS/ScatterPlotSpeeds_Average")
+#makePNGs(g_errScatterPlots, "outputs/GTFS/ScatterPlotSpeeds_Error")
+
+g_descLineGraphs[[1]]
+```
 
 
 

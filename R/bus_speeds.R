@@ -72,6 +72,14 @@ make_centroids <- function(tdm_transit_lines) {
     mutate(centroid_id = row_number()) 
 }
 
+make_centerpoint <- function(tdm_transit_lines) {
+  tdm_transit_lines %>%
+    mutate(midlinep = st_point_on_surface(geometry)) %>%
+    as.tibble() %>% select(-geometry) %>% st_as_sf() %>%
+    #create centroid id
+    mutate(centroid_id = row_number()) 
+}
+
 #' just am routes 2x, 919, 920 (40,106,107)
 
 # Clean Data ------------------------------------------------------------------#

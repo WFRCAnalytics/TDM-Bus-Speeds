@@ -40,6 +40,35 @@ summarize_speeds <- function(uta_gps_lines_mf){
               aveSpeed = mean(speed))
 }
 
+get_stop_locations <- function(uta_gtfs, gtfs_gps_points, mflines){
+  trips <- uta_gtfs$trips
+  routes <- uta_gtfs$routes
+  
+  uta_gps_points <- tar_read(gtfs_gps_points) %>%
+    filter(!is.na(stop_id)) %>%
+    merge_trip_routes(trips,routes)
+
+  uta_gps_points_s <- uta_gps_points %>%
+    mutate(startHour = as.numeric(substr(timestamp,1,2)),
+           rownum = row_number()) %>%
+    mutate(firstStartHour = ifelse(rownum == 1, startHour, NA)) %>%
+    fill(firstStartHour, .direction = "down") %>%
+    mutate(PkOk = ifelse(firstStartHour %in% c(6:8), "pk", ifelse(firstStartHour %in% c(9:14), "ok", "other"))) %>%
+    filter(service_id %in% mflines) %>%
+    ungroup() %>%
+    group_by(route_short_name, PkOk, direction_id, stop_sequence) %>%
+    filter(PkOk != "other") %>%
+    arrange(stop_sequence, timestamp) %>%
+    group_by(route_short_name,PkOk,direction_id,stop_sequence) %>%
+    summarize(aveSpeed = mean(speed)) 
+  
+  stop_locations <- uta_gps_points_s %>% 
+    ungroup() %>%
+    mutate(long = unlist(map(uta_gps_points_s$geometry,1)),
+           lat = unlist(map(uta_gps_points_s$geometry,2)))
+}
+
+
 calculate_gtfs_compass <- function(uta_gps_segments){
   uta_segments_geosphere <- uta_gps_segments %>%
     filter(!(is.na(lines)))
@@ -159,6 +188,56 @@ join_gtfs <- function(uta_compass_tdm_r,tdm_centroids_clean2){
     filter(!is.na(PkOk))
 }
 
+join_to_gtfs <- function(tdm_sum,gtfs_csum){
+  pkroutes <- list()
+  okroutes <- list()
+  compasses <- c("EB","WB","NB","SB")
+  last_route <- 109
+  iterations <- 1
+  
+  for(i in 1:last_route){
+    
+    for(j in 1: length(compasses)){
+      tdm_filtered <- tdm_sum %>%
+        filter(
+          LabelNum == i,
+          compass == compasses[j]
+        )
+      gtfs_filtered <- gtfs_csum %>%
+        filter(
+          LabelNum == i,
+          compass == compasses[j]
+        )
+      
+      gtfs_fpk <- gtfs_filtered %>% filter(PkOk == "pk")
+      gtfs_fok <- gtfs_filtered %>% filter(PkOk == "ok")
+      
+      
+      joined_pk <- gtfs_fpk %>%
+        cbind(tdm_filtered[st_nearest_feature(gtfs_fpk,tdm_filtered),])%>%
+        mutate(dist = ifelse(is.na(LabelNum.1), NA, st_distance(midlinep, geometry, by_element = T))) %>%
+        as_tibble() %>%select(-geometry) %>% st_as_sf()
+      joined_ok <- gtfs_fok %>%
+        cbind(tdm_filtered[st_nearest_feature(gtfs_fok,tdm_filtered),])%>%
+        mutate(dist = ifelse(is.na(LabelNum.1), NA, st_distance(midlinep, geometry, by_element = T))) %>%
+        as_tibble() %>%select(-geometry) %>% st_as_sf()
+      
+      pkroutes[[iterations]] <- joined_pk
+      okroutes[[iterations]] <- joined_ok
+      
+      iterations <- iterations + 1
+    }
+  }
+  
+  gtfs_tdm_pk <- bind_rows(pkroutes) %>%
+    select(-LabelNum.1, -Label)
+  gtfs_tdm_ok <- bind_rows(okroutes) %>%
+    select(-LabelNum.1, -Label)
+  
+  gtfs_tdm <- bind_rows(pkroutes,okroutes) %>%
+    filter(!is.na(PkOk))
+}
+
 merge_tdm_links <- function(joint_gtfs_points,tdm_compass){
   tdm_compass_small <- tdm_compass %>% select(link_id,geometry)
   joint_lines_test <- joint_gtfs_points %>% 
@@ -168,6 +247,74 @@ merge_tdm_links <- function(joint_gtfs_points,tdm_compass){
     distinct(centroid_id,LabelNum,Label,.keep_all=TRUE) %>% 
     st_as_sf()
 }
+
+
+
+### VISUALS ###
+make_histo_df <- function(joint_gtfs_lines){
+  joint_gtfs_lines %>%
+    mutate(Modeled = ifelse(PkOk == "pk", P_SPEED1, O_SPEED1),
+           Observed = as.numeric(aveSpeed)*0.621371) %>%
+    as_tibble() %>%
+    mutate(dif = Observed - Modeled) %>%
+    select(LabelNum,Label,LINKSEQ1,PkOk,dif,dist,MODE,FT_2019,AREATYPE,Observed,Modeled) %>%
+    pivot_longer(!c(LabelNum,Label,LINKSEQ1,PkOk,dif,dist,MODE,FT_2019,AREATYPE), names_to = "Type", values_to = "Speed") %>%
+    mutate(filterout = ifelse(Type == "Modeled", FALSE, 
+                              ifelse(dif > 30 & Speed > 50, TRUE, FALSE))) %>%
+    mutate(filterout = ifelse(Type == "Observed" & dist > 3000, TRUE, filterout)) %>%
+    filter(filterout == FALSE) %>%
+    group_by(LabelNum,Label,PkOk,Type) %>%
+    arrange(LabelNum,LINKSEQ1)
+}
+
+plot_routes <- function(histo){
+  routeplots <- list()
+  for (i in 1:109){
+    if(i == 72){next}
+    
+    routeMap <- histo %>%
+      filter(LabelNum == i)
+    
+    routeplots[[i]] <- 
+      ggplot(routeMap, aes(x = LINKSEQ1, y = Speed, fill = Type))+
+      facet_wrap(~PkOk)+
+      geom_col(alpha = .25, position = "dodge2")+     
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+      geom_line(aes(x = LINKSEQ1,y = Speed, colour = Type))+
+      scale_color_manual(values = c("blue","red")) +
+      scale_fill_manual(values = c("blue","red")) +
+      xlab("Link Sequence ID") + ylab("Speed (mph)") +
+      ggtitle(paste0("Speed Comparison by Link for Route ",routeMap$LabelNum, "-",routeMap$Label)) +
+      theme()+
+      theme_bw()
+  }
+  
+  for (i in 1:109){
+    if(i == 72){next}
+    routeMap <- histo %>%
+      filter(LabelNum == i)
+    
+    name <- paste0(routeMap[1, , drop = FALSE]$LabelNum, "-",routeMap[1, , drop = FALSE]$Label)
+    names(routeplots)[i] <- name
+  }
+  
+  routeplotsclean <- routeplots[-c(72,101,104,105,106,107,108)]; 
+  routeplotsclean
+}
+
+join_gtfs_speeds <- function(joint_gtfs_lines){
+  joint_gtfs_lines %>%
+    mutate(Modeled = ifelse(PkOk == "pk", P_SPEED1, O_SPEED1),
+           Observed = as.numeric(aveSpeed)*0.621371) %>%
+    mutate(PercentError = (Observed - Modeled)/Modeled) %>%  
+    mutate(dif = Observed - Modeled) %>%
+    mutate(filterout = ifelse(dif > 30 & Observed > 50, TRUE, 
+                              ifelse(dist > 3000, TRUE, FALSE))) %>%
+    filter(filterout == FALSE)
+}
+
+
+
 
 
 ### GLOBAL FUNCTIONS ###
