@@ -96,11 +96,12 @@ analysis_targets <- tar_plan(
 
 visual_targets<- tar_plan(
   #' create visual plots to understand how UTA observed speeds compare with TDM modeled speeds
-  tar_target(joint_estimated_speeds, join_estimated_speeds(pk_0_estimated_speeds, pk_1_estimated_speeds, ok_0_estimated_speeds, ok_1_estimated_speeds, FTG_2019)), # FT_2019 or FTG_2019
-  tar_target(descLineGraphs, mapPlots(joint_estimated_speeds, "FTG", descLinePlotter)),
-  tar_target(descScatterPlots, mapPlots(joint_estimated_speeds, "FTG", descScatterPlotter)),
-  tar_target(aveScatterPlots, mapPlots(joint_estimated_speeds, "FTG", aveScatterPlotter)),
-  tar_target(errScatterPlots, mapPlots(joint_estimated_speeds, "FTG", errorScatterPlotter))
+  tar_target(joint_estimated_speeds, join_estimated_speeds(pk_0_estimated_speeds, pk_1_estimated_speeds, ok_0_estimated_speeds, ok_1_estimated_speeds)),
+  tar_target(mutated_joint_speeds, mutate_joint_speeds(joint_estimated_speeds,FTG_2019)), # FT_2019 or FTG_2019
+  tar_target(descLineGraphs, mapPlots(mutated_joint_speeds, "FTG", descLinePlotter)),
+  tar_target(descScatterPlots, mapPlots(mutated_joint_speeds, "FTG", descScatterPlotter)),
+  tar_target(aveScatterPlots, mapPlots(mutated_joint_speeds, "FTG", aveScatterPlotter)),
+  tar_target(errScatterPlots, mapPlots(mutated_joint_speeds, "FTG", errorScatterPlotter))
 )
 
 #descLineGraphs <- tar_read(descLineGraphs)
@@ -122,12 +123,14 @@ gtfs_targets <- tar_plan(
   tar_target(uta_gtfs, gtfstools::read_gtfs(gtfs_path)),
   tar_target(gtfs_gps, gtfs2gps(uta_gtfs, spatial_resolution = 100)),
   tar_target(gtfs_gps_lines, gps_as_sflinestring(gtfs_gps)),
+  tar_target(gtfs_gps_points, gps_as_sfpoints(gtfs_gps)),
   
   tar_target(trips, uta_gtfs$trips),
   tar_target(routes, uta_gtfs$routes),
   tar_target(triproutes, merge_trip_routes(gtfs_gps_lines,trips,routes)),
   tar_target(timepeaks, calculate_time_peak(triproutes)),
   tar_target(mflines, c("1004","12704","13304","210704","24904","128004","142204","340904","504","150804","4", "17")),
+  tar_target(stop_locations, get_stop_locations(uta_gtfs, gtfs_gps_points,mflines)),
   tar_target(gps_lines_mf, filter_lines(timepeaks,mflines)),
   tar_target(speed_sums, summarize_speeds(gps_lines_mf)),
   tar_target(segments, st_make_segments(speed_sums)),
@@ -140,13 +143,24 @@ gtfs_targets <- tar_plan(
   
   tar_target(join_tdm_gtfs, join_gtfs(gtfs_tdm_routes,tdm_centroids_clean2)),
   tar_target(merge_tdm_lines, merge_tdm_links(join_tdm_gtfs,tdm_lines_compass))
-  
-  
-  
-  
-  
 )
 
+gtfs_visual_targets <- tar_plan(
+  tar_target(gtfs_histo_df, make_histo_df(merge_tdm_lines)),
+  tar_target(routeplots, plot_routes(gtfs_histo_df)),
+  tar_target(joint_gtfs_speeds, join_gtfs_speeds(merge_tdm_lines)),
+  tar_target(mutated_gtfs_speeds, mutate_joint_speeds(joint_gtfs_speeds,FTG_2019)), # FT_2019 or FTG_2019
+  
+  tar_target(g_descLineGraphs, mapPlots(mutated_gtfs_speeds, "FTG", descLinePlotter)),
+  tar_target(g_descScatterPlots, mapPlots(mutated_gtfs_speeds, "FTG", descScatterPlotter)),
+  tar_target(g_aveScatterPlots, mapPlots(mutated_gtfs_speeds, "FTG", aveScatterPlotter)),
+  tar_target(g_errScatterPlots, mapPlots(mutated_gtfs_speeds, "FTG", errorScatterPlotter))
+)
+
+
+#####################################################################################################################################################################################################
+# Estimation # Adjusting GTFS results to estimate Bus Speed Ratios #
+#####################################################################################################################################################################################################
 
 
 
@@ -156,7 +170,8 @@ tar_plan(
   analysis_targets,
   visual_targets,
   
-  gtfs_targets
+  gtfs_targets,
+  gtfs_visual_targets
   
 )
 
