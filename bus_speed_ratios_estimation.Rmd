@@ -374,33 +374,35 @@ groups <- left_join(r_group1,group2) %>%
 #### 3. Grouped Functional Types All Area Types
 ```{r groupagain, warning=FALSE, message=FALSE}
 groupedfts <- traversetime_ftg %>%
-    mutate(
+  mutate(
       FTG2 = case_when(
-        FT %in% c(20:26,30:40) ~ 30,
-        FT %in% c(28:29,41:42) ~ 40,
-        FT == 3 ~ 3,
-        FT %in% c(1,4:8) ~ 1,
-        FT %in% c(2,13:15) ~  2,
+        FT %in% c(1,4:10) ~ 1,       # collectors & locals
+        FT == 3 ~  2,                # minor arterials
+        FT == 2 ~ 3,                 # principal arterials
+        FT %in% c(11:19) ~ 4,        # expressways
+        FT %in% c(20:26,30:40) ~ 5,  # freeways
+        FT %in% c(28:29,41:42) ~ 6,  # ramps
         TRUE ~ 0 
     )) %>%
     mutate(
       FTG2CLASS= case_when(
-        FTG2 == 30 ~ "FT-Freeways",
-        FTG2 == 40 ~ "FT-Ramps",
-        FTG2 == 3 ~ "FT-Minor Arterials",
         FTG2 == 1 ~ "FT-Collectors & Locals",
-        FTG2 == 2 ~ "FT-Principal Arterials & Expressways",
+        FTG2 == 2 ~ "FT-Minor Arterials",
+        FTG2 == 3 ~ "FT-Principal Arterials",
+        FTG2 == 4 ~ "FT-Expressways",
+        FTG2 == 5 ~ "FT-Freeways",
+        FTG2 == 6 ~ "FT-Ramps",
         TRUE ~ "None"
     ))
 ```
 
 ```{r sumtime3, warning=FALSE, message=FALSE}
 group3_pkok <- groupedfts %>%
-  group_by(PkOk, FTG2CLASS, AREATYPE) %>%
+  group_by(PkOk, FTG2CLASS, FTG2, AREATYPE) %>%
     summarize(ModeledTimeSum = sum(ModeledTime),
               ObservedTimeSum = sum(ObservedTime))
 group3_dt <- groupedfts %>%
-  group_by(FTG2CLASS, AREATYPE) %>%
+  group_by(FTG2CLASS, FTG2, AREATYPE) %>%
     summarize(ModeledTimeSum = sum(ModeledTime),
               ObservedTimeSum = sum(ObservedTime)) %>%
     mutate(PkOk = "dt")
@@ -409,20 +411,20 @@ group3 <- bind_rows(group3_dt,group3_pkok) %>%
   mutate(ratio = ModeledTimeSum / ObservedTimeSum) %>%
   ungroup() %>%
   filter(!is.na(ratio)) %>%
-  select(PkOk,FTG2CLASS, AREATYPE, ratio)
+  select(PkOk,FTG2CLASS, FTG2, AREATYPE, ratio)
 
 r_group3 <- group3 %>%
-  pivot_wider(c(FTG2CLASS,PkOk),names_from = AREATYPE, values_from= ratio) %>%
-  select(2,1,7,5,3,6,4)
+  pivot_wider(c(FTG2CLASS,FTG2,PkOk),names_from = AREATYPE, values_from= ratio) %>%
+  select(2,1,3,8,4,5,6,7)
 ```
 
 ```{r sumtime4, warning=FALSE, message=FALSE}
 group4_pkok <- groupedfts %>%
-  group_by(PkOk, FTG2CLASS) %>%
+  group_by(PkOk, FTG2CLASS, FTG2) %>%
     summarize(ModeledTimeSum = sum(ModeledTime),
               ObservedTimeSum = sum(ObservedTime))
 group4_dt <- groupedfts %>%
-  group_by(FTG2CLASS) %>%
+  group_by(FTG2CLASS, FTG2) %>%
     summarize(ModeledTimeSum = sum(ModeledTime),
               ObservedTimeSum = sum(ObservedTime)) %>%
     mutate(PkOk = "dt")
@@ -431,7 +433,7 @@ group4 <- bind_rows(group4_dt,group4_pkok) %>%
   mutate(ratio = ModeledTimeSum / ObservedTimeSum) %>%
   ungroup() %>%
   filter(!is.na(ratio)) %>%
-  select(PkOk,FTG2CLASS, ratio)
+  select(PkOk,FTG2CLASS, FTG2, ratio)
 
 groups4 <- left_join(r_group3,group4) %>%
   rename("All" = ratio)
@@ -487,9 +489,10 @@ kbl(groups_ok,
 ### Grouped Functional Types All Area Types
 ```{r table3, echo = FALSE}
 groupss4 <- groups4 %>%
-  select(1,2,3,5,7,4,6,8) %>%
+  select(-All) %>%
   rename("1-Rural" = "1", "2-Transition" = "2", "3-Suburban" = "3", "4-Urban" = "4", "5-CBD-Like" = "5") %>%
-  round_df(2)
+  round_df(2) %>%
+  arrange(FTG2)
 
 groups_dt4 <- groupss4 %>%
   filter(PkOk == "dt") %>% select(-PkOk)
@@ -615,12 +618,14 @@ Lets get an idea of what our ratios look like plotted on a graph. This will help
 ```{r ratios1, include = FALSE, message = FALSE, warning = FALSE}
 raw_ratios <- groupss4 %>%
   rename("FTGROUP" = "FTG2CLASS") %>%
+  rename("FTGNUM" = "FTG2") %>%
   filter(FTGROUP != "FT-Ramps")
 #write_csv(raw_ratios,"outputs/Estimation/raw_ratios.csv")
 
 ratioTable <- groupss4 %>%
-  pivot_longer(-c(PkOk, FTG2CLASS), names_to = "area", values_to= "ratio") %>%
+  pivot_longer(-c(PkOk, FTG2CLASS, FTG2), names_to = "area", values_to= "ratio") %>%
   rename("FTGROUP" = "FTG2CLASS") %>%
+    rename("FTGNUM" = "FTG2") %>%
   filter(FTGROUP != "FT-Ramps") %>%
   mutate(areaNum = case_when(
     area == "1-Rural" ~ 1,
@@ -681,13 +686,15 @@ Now that for all three periods (peak, off-peak, and average) all have the same m
 
 ```{r ratios2, echo=FALSE, out.width="100%"}
 ratioTable2 <-ratioTable1.5 %>%
-  group_by(FTGROUP,areaNum)  %>%
+  group_by(FTGROUP,FTGNUM,areaNum)  %>%
   filter(!is.na(areaNum)) %>%
   as.data.table()
 
-ratioTable2[, ratio2 := round(na.spline(ratio),2)]
+ratioTable2.1 <- ratioTable2 %>%
+  mutate(ratio2 = na.approx(ratio, rule = 2)) %>%
+  mutate(ratio2.1 = na.spline(ratio) + 0*na.approx(ratio, na.rm = FALSE))
 
-ggplot(ratioTable2) +
+ggplot(ratioTable2.1) +
   aes(x = areaNum, y = ratio2, color = FTGROUP) +
   facet_wrap(~PkOk)+
   geom_point(size = 2)+ 
@@ -702,31 +709,54 @@ ggplot(ratioTable2) +
 Looking at result of filling in all the na values using the default R function, we see that the curves still need some smoothing out as well as some consistency between all three. As a result, this next step involves manually adjusting some values. The values that are adjusted are shown as part of the updated graph below.
 
 ```{r ratios3, include = FALSE, warning= FALSE, message = FALSE}
-ratioTable3 <- ratioTable2 %>%
-  mutate(rownum = row_number()) %>%
+ratioTable3 <- ratioTable2.1 %>%
+  mutate(pknum = ifelse(PkOk == "dt", 1, ifelse(PkOk == "ok", 2, 3))) %>%
+  mutate(ftat = as.numeric(paste0(pknum,FTGNUM,areaNum))) %>%
   mutate(ratio3 = case_when(
-    # fix Rural Freeways for all time periods
-    rownum == 6 ~ 0.62,
-    rownum == 8 ~ 0.68,
-    rownum == 48 ~ 0.7,
-    rownum == 46 ~ 0.62,
     # fix collectors/locals for all time periods
-    rownum == 1 ~ 0.75,
-    rownum == 21 ~ 0.74,
-    rownum == 23 ~ 0.62,
-    rownum == 41 ~ 0.76,
-    # fix principal arterials/expressways for all time periods
-    rownum == 16 ~ 0.88,
-    rownum == 18 ~ 0.62,
-    rownum == 36 ~ 0.82,
-    rownum == 38 ~ 0.59,
-    rownum == 58 ~ 0.64,
+    ftat == 111 ~ 0.75,
+    ftat == 112 ~ 0.65,
+    ftat == 114 ~ 0.60,
+    ftat == 311 ~ 0.76,
+    ftat == 312 ~ 0.66,
+    ftat == 314 ~ 0.61,
+    ftat == 211 ~ 0.74,
+    ftat == 212 ~ 0.64,
+    ftat == 214 ~ 0.58,
+    # fix principal arterials for all time periods
+    ftat == 133 ~ 0.64,
+    ftat == 333 ~ 0.65,
+    ftat == 331 ~ 0.86,
+    ftat == 233 ~ 0.59,
+    ftat == 231 ~ 0.79,
     # fix minor arterials for all time periods
-    rownum == 53 ~ 0.66,
-    rownum == 51 ~ 0.82, 
-    rownum == 31 ~ 0.77,
-    rownum == 13 ~ 0.65,
-    rownum == 11 ~ 0.81, 
+    ftat == 121 ~ 0.81,
+    ftat == 123 ~ 0.65,
+    ftat == 221 ~ 0.77,
+    ftat == 225 ~ 0.5,
+    ftat == 321 ~ 0.82,
+    ftat == 323 ~ 0.67,
+    # fix freeways for all time periods
+    ftat == 153 ~ 0.7,
+    ftat == 155 ~ 0.85,
+    ftat == 251 ~ 0.47,
+    ftat == 255 ~ 0.65,
+    ftat == 353 ~ 0.71,
+    ftat == 355 ~ .86,
+    # fix expressways for all time periods
+    ftat == 141 ~ 0.5,
+    ftat == 142 ~ 0.52,
+    ftat == 143 ~ 0.67,
+    ftat == 144 ~ 0.77,
+    ftat == 145 ~ 0.78,
+    ftat == 241 ~ 0.51,
+    ftat == 244 ~ 0.66,
+    ftat == 245 ~ 0.67,
+    ftat == 341 ~ 0.5,
+    ftat == 342 ~ 0.53,
+    ftat == 343 ~ 0.68,
+    ftat == 344 ~ 0.77,
+    ftat == 345 ~ 0.78,
     TRUE ~ ratio2
   ))
 ```
@@ -742,41 +772,15 @@ ratios3graph  +
   geom_line()
 ```
 
-### Step Five -- Change FT-Collectors & Locals
-Looking at the manually adjusted lines, the S-type curve shown in the FT-Collectors & Locals doesn't make a lot of sense. Lets make one more additional manual adjustment where we force this group to follow the same pattern as the minor arterials and principal arterials / expressways.
-
-```{r ratios32, include = FALSE, warning= FALSE, message = FALSE}
-ratioTable3.2 <- ratioTable3 %>%
-  mutate(ratio3 = case_when(
-    rownum == 2 ~ 0.65,
-    rownum == 4 ~ 0.6,
-    rownum == 22 ~ 0.64,
-    rownum == 24 ~ 0.59,
-    rownum == 42 ~ 0.66,
-    rownum == 44 ~ 0.61,
-    TRUE ~ ratio3
-  ))
-```
-
-```{r ratios32graph, echo = FALSE, message = FALSE, warning = FALSE, out.width="100%"}
-ratios3.2graph <- ggplot(ratioTable3.2) +
-  aes(x = areaNum, y = ratio3, color = FTGROUP) +
-  facet_wrap(~PkOk)+
-  geom_point(size = 2)+ 
-  scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
-  theme_bw()
-ratios3.2graph  +
-  geom_line()
-```
-
-
-### Step Six -- Mathematically Smooth Lines
+### Step Five -- Mathematically Smooth Lines
 Now that we have some pretty smooth lines through some manual adjustment, lets mathematically smoothen them a little more through a mathematical program. 
 
 ```{r ratios4graph, echo = FALSE, message = FALSE, warning = FALSE, out.width="100%"}
-ratios4graph <- ratios3.2graph + stat_smooth(method = "lm", formula = y ~ poly(x,3), se = FALSE)
+ratios4graph <- ratios3graph + stat_smooth(method = "lm", formula = y ~ poly(x,3), se = FALSE)
 ratios4graph
 ```
+
+
 ```{r statsmoothdata, message = FALSE, warning = FALSE, include = FALSE}
 stuff <- ggplot_build(ratios4graph)
 data <- stuff[[1]][[2]]
@@ -805,10 +809,11 @@ stat_smooth_data <-
   bind_rows(ones,twos,threes,fours,fives) %>%
   mutate(y = round(y,2)) %>%
   mutate(FTGROUP = case_when(
-    group == 2 ~ "FT-Freeways",
+    group == 3 ~ "FT-Freeways",
     group == 1 ~ "FT-Collectors & Locals",
-    group == 3 ~ "FT-Minor Arterials",
-    group == 4 ~ "FT-Principal Arterials & Expressways"
+    group == 4 ~ "FT-Minor Arterials",
+    group == 5 ~ "FT-Principal Arterials",
+    group == 2 ~ "FT-Expressways"
   )) %>%
   mutate(PkOk = ifelse(as.numeric(PANEL) == 2, "ok", ifelse(as.numeric(PANEL) == 1, "dt", "pk"))) %>%
   mutate(areaNum = x, ratio4 = y) %>%
@@ -826,6 +831,7 @@ ratios4graph <- ggplot(ratioTable4) +
   scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
   theme_bw() + 
   geom_line()
+ratios4graph
 ```
 
 ### Final Estimation Table
@@ -853,4 +859,22 @@ kbl(groups_o4,
   kable_classic(full_width = F, html_font = "Cambria")
 ```
 
+
+### Write Table for TDM Model
+Now that we have the final estimation table, we have to merge together the peak and off peak data and create an input table for the TDM to read. We do this below, as well as export to a csv file.
+
+```{r}
+names(groups_p4)[2] = "PK1"
+names(groups_p4)[3] = "PK2"
+names(groups_p4)[4] = "PK3"
+names(groups_p4)[5] = "PK4"
+names(groups_p4)[6] = "PK5"
+names(groups_o4)[2] = "OK1"
+names(groups_o4)[3] = "OK2"
+names(groups_o4)[4] = "OK3"
+names(groups_o4)[5] = "OK4"
+names(groups_o4)[6] = "OK5"
+finalt <- left_join(groups_p4,groups_o4)
+#write_csv(finalt,"outputs/Estimation/bus_speed_ratios.csv")
+```
 
