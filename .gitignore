@@ -1,4 +1,3 @@
-data/HERE/*
 data/Road/*
-data/TDM/*
+data/TDM/loadednet/*
 .Rproj.user
