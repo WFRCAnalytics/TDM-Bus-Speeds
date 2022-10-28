@@ -27,6 +27,7 @@ library(foreign)
 library(kableExtra)
 library(zoo)
 library(data.table)
+library(animation)
 source("R/bus_speeds_visuals.R")
 source("R/bus_speeds.R")
 source("R/gtfs_functions.R")
@@ -619,32 +620,37 @@ Lets get an idea of what our ratios look like plotted on a graph. This will help
 raw_ratios <- groupss4 %>%
   rename("FTGROUP" = "FTG2CLASS") %>%
   rename("FTGNUM" = "FTG2") %>%
-  filter(FTGROUP != "FT-Ramps")
+  filter(FTGROUP != "FT-Ramps") 
 #write_csv(raw_ratios,"outputs/Estimation/raw_ratios.csv")
 
 ratioTable <- groupss4 %>%
+  filter(FTG2CLASS != "FT-Ramps")  %>%
   pivot_longer(-c(PkOk, FTG2CLASS, FTG2), names_to = "area", values_to= "ratio") %>%
-  rename("FTGROUP" = "FTG2CLASS") %>%
-    rename("FTGNUM" = "FTG2") %>%
+  rename("FTNAME" = "FTG2CLASS") %>%
+  rename("FTGROUP" = "FTG2") %>%
+  rename("Ratio" = "ratio") %>%
   filter(FTGROUP != "FT-Ramps") %>%
-  mutate(areaNum = case_when(
+  mutate(AreaType = case_when(
     area == "1-Rural" ~ 1,
     area == "2-Transition" ~ 2,
     area == "3-Suburban" ~ 3, 
     area == "4-Urban" ~ 4,
     area == "5-CBD-Like" ~ 5
-  ))
+  )) %>%
+  mutate(FTGROUP = as.factor(FTGROUP)) %>%
+  mutate(PkOk = ifelse(PkOk == "dt","Average",ifelse(PkOk == "pk", "Peak", "Off-Peak")))
 ```
 
-```{r inputratiograph, echo = FALSE, warning=FALSE, message=FALSE, out.width = "100%"}
-ggplot(ratioTable) +
-  aes(x = areaNum, y = ratio, color = FTGROUP) +
+```{r inputratiograph, echo = FALSE, warning=FALSE, message=FALSE}
+ratioGraph <- ggplot(ratioTable) +
+  aes(x = AreaType, y = Ratio, color = FTGROUP) +
   facet_wrap(~PkOk)+
   geom_point(size = 2)+ 
   scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
   theme_bw() +
   geom_line()
   #stat_smooth(method = "lm", formula = y ~ poly(x,3), se = FALSE)
+ratioGraph
 ```
 
 ### Step Two -- PkOk Ratio of Ratios
@@ -653,15 +659,15 @@ Now that we have an idea of what the data looks like, lets start by filling in t
 
 ```{r pkokratios, echo = FALSE, warning=FALSE, message=FALSE}
 pkRatios <- ratioTable %>%
-  filter(PkOk == "pk", !is.na(areaNum)) %>%
+  filter(PkOk == "Peak", !is.na(AreaType)) %>%
   select(-PkOk, -area) %>%
-  rename("ratioPk" = "ratio")
+  rename("ratioPk" = "Ratio")
 okRatios <- ratioTable %>%
-  filter(PkOk == "ok", !is.na(areaNum)) %>%
-  rename("ratioOk" = "ratio") %>%
+  filter(PkOk == "Off-Peak", !is.na(AreaType)) %>%
+  rename("ratioOk" = "Ratio") %>%
   select(-area) %>%
-  left_join(pkRatios, by = c("FTGROUP","areaNum")) %>%
-  select(PkOk,FTGROUP,areaNum,ratioPk,ratioOk) %>%
+  left_join(pkRatios, by = c("FTGROUP","AreaType")) %>%
+  select(PkOk,FTGROUP,AreaType,ratioPk,ratioOk) %>%
   mutate(PkOkRatio = ratioOk/ratioPk)
 okRatioAve <- okRatios %>%
   filter(!is.na(PkOkRatio)) %>%
@@ -675,33 +681,42 @@ kbl(okRatioAve,
 
 With these values, we can fill in a few missing points. Actually, there are only two occurrences where a peak ratio exists but an off-peak does not. This is with FT-Freeways of Areatypes 2 and 4. Lets fill those in with the calculated FR-Freeway PkOk ratio. This is done below.
 
-```{r, message = FALSE, warning = FALSE}
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
 ratioTable1.5 <-ratioTable %>%
-  mutate(ratio = ifelse(PkOk == "ok", ifelse(FTGROUP == "FT-Freeways" & areaNum == 2, 0.48,ifelse(FTGROUP == "FT-Freeways" & areaNum == 4, 0.62, ratio)), ratio))
+  mutate(Ratio = ifelse(PkOk == "Off-Peak", ifelse(FTGROUP == 5 & AreaType == 2, 0.48,ifelse(FTGROUP == 5 & AreaType == 4, 0.62, Ratio)), Ratio))
+ratioGraph15 <- ggplot(ratioTable1.5) +
+  aes(x = AreaType, y = Ratio, color = FTGROUP) +
+  facet_wrap(~PkOk)+
+  geom_point(size = 2)+ 
+  scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
+  theme_bw() +
+  geom_line()
+ratioGraph15
 ```
 
 
 ### Step Three -- Fill in All Missing Values
-Now that for all three periods (peak, off-peak, and average) all have the same missing data points, lets extrapolate the missing values based on what already exists within each period table. Lets do this by using the built in extrapolation function *na.spline* from the *zoo* package in R. After having the built in function determine the missing values, lets plot them and see how the data now looks.
+Now that for all three periods (peak, off-peak, and average) all have the same missing data points, lets extrapolate the missing values based on what already exists within each period table. Lets do this by using the built in extrapolation function *na.approx* from the *zoo* package in R. After having the built in function determine the missing values, lets plot them and see how the data now looks.
 
-```{r ratios2, echo=FALSE, out.width="100%"}
+```{r ratios2, echo=FALSE}
 ratioTable2 <-ratioTable1.5 %>%
-  group_by(FTGROUP,FTGNUM,areaNum)  %>%
-  filter(!is.na(areaNum)) %>%
+  group_by(FTGROUP,AreaType)  %>%
+  filter(!is.na(AreaType)) %>%
   as.data.table()
 
 ratioTable2.1 <- ratioTable2 %>%
-  mutate(ratio2 = na.approx(ratio, rule = 2)) %>%
-  mutate(ratio2.1 = na.spline(ratio) + 0*na.approx(ratio, na.rm = FALSE))
+  mutate(Ratio2 = na.approx(Ratio, rule = 2)) %>%
+  mutate(Ratio2.1 = na.spline(Ratio) + 0*na.approx(Ratio, na.rm = FALSE))
 
-ggplot(ratioTable2.1) +
-  aes(x = areaNum, y = ratio2, color = FTGROUP) +
+ratioGraph2 <- ggplot(ratioTable2.1) +
+  aes(x = AreaType, y = Ratio2, color = FTGROUP) +
   facet_wrap(~PkOk)+
   geom_point(size = 2)+ 
   scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
   theme_bw() +
   geom_line()
   #stat_smooth(method = "lm", formula = y ~ poly(x,3), se = FALSE)
+ratioGraph2
 ```
 
 
@@ -710,9 +725,9 @@ Looking at result of filling in all the na values using the default R function, 
 
 ```{r ratios3, include = FALSE, warning= FALSE, message = FALSE}
 ratioTable3 <- ratioTable2.1 %>%
-  mutate(pknum = ifelse(PkOk == "dt", 1, ifelse(PkOk == "ok", 2, 3))) %>%
-  mutate(ftat = as.numeric(paste0(pknum,FTGNUM,areaNum))) %>%
-  mutate(ratio3 = case_when(
+  mutate(pknum = ifelse(PkOk == "Average", 1, ifelse(PkOk == "Off-Peak", 2, 3))) %>%
+  mutate(ftat = as.numeric(paste0(pknum,as.numeric(FTGROUP),AreaType))) %>%
+  mutate(Ratio3 = case_when(
     # fix collectors/locals for all time periods
     ftat == 111 ~ 0.75,
     ftat == 112 ~ 0.65,
@@ -757,25 +772,26 @@ ratioTable3 <- ratioTable2.1 %>%
     ftat == 343 ~ 0.68,
     ftat == 344 ~ 0.77,
     ftat == 345 ~ 0.78,
-    TRUE ~ ratio2
+    TRUE ~ Ratio2
   ))
 ```
 
-```{r ratios3graph, echo = FALSE, message = FALSE, warning = FALSE, out.width="100%"}
+```{r ratios3graph, echo = FALSE, message = FALSE, warning = FALSE}
 ratios3graph <- ggplot(ratioTable3) +
-  aes(x = areaNum, y = ratio3, color = FTGROUP) +
+  aes(x = AreaType, y = Ratio3, color = FTGROUP) +
   facet_wrap(~PkOk)+
   geom_point(size = 2)+ 
   scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
   theme_bw()
-ratios3graph  +
+ratios3graphline <- ratios3graph  +
   geom_line()
+ratios3graphline
 ```
 
 ### Step Five -- Mathematically Smooth Lines
 Now that we have some pretty smooth lines through some manual adjustment, lets mathematically smoothen them a little more through a mathematical program. 
 
-```{r ratios4graph, echo = FALSE, message = FALSE, warning = FALSE, out.width="100%"}
+```{r ratios4graph, echo = FALSE, message = FALSE, warning = FALSE}
 ratios4graph <- ratios3graph + stat_smooth(method = "lm", formula = y ~ poly(x,3), se = FALSE)
 ratios4graph
 ```
@@ -808,45 +824,60 @@ fives<- data %>%
 stat_smooth_data <- 
   bind_rows(ones,twos,threes,fours,fives) %>%
   mutate(y = round(y,2)) %>%
-  mutate(FTGROUP = case_when(
-    group == 3 ~ "FT-Freeways",
-    group == 1 ~ "FT-Collectors & Locals",
-    group == 4 ~ "FT-Minor Arterials",
-    group == 5 ~ "FT-Principal Arterials",
-    group == 2 ~ "FT-Expressways"
-  )) %>%
-  mutate(PkOk = ifelse(as.numeric(PANEL) == 2, "ok", ifelse(as.numeric(PANEL) == 1, "dt", "pk"))) %>%
-  mutate(areaNum = x, ratio4 = y) %>%
+  mutate(FTGROUP = as.factor(group)) %>%
+  mutate(PkOk = ifelse(as.numeric(PANEL) == 2, "Off-Peak", ifelse(as.numeric(PANEL) == 1, "Average", "Peak"))) %>%
+  mutate(AreaType = x, Ratio4 = y) %>%
   ungroup() %>%
-  select(PkOk, FTGROUP,areaNum, ratio4)
+  select(PkOk, FTGROUP,AreaType, Ratio4)
 
 ratioTable4 <- ratioTable3 %>%
-  left_join(stat_smooth_data, by = c("PkOk", "FTGROUP", "areaNum"))
+  left_join(stat_smooth_data, by = c("PkOk", "FTGROUP", "AreaType"))
 
 #double check that it works
-ratios4graph <- ggplot(ratioTable4) +
-  aes(x = areaNum, y = ratio4, color = FTGROUP) +
+ratios4graphCheck <- ggplot(ratioTable4) +
+  aes(x = AreaType, y = Ratio4, color = FTGROUP) +
   facet_wrap(~PkOk)+
   geom_point(size = 2)+ 
   scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
   theme_bw() + 
   geom_line()
-ratios4graph
 ```
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+ratios4graphCheck
+```
+
+### Progress
+Lets make a GIF of the progress we made!
+```{r gif, include = FALSE, warning=FALSE, message=FALSE}
+#animation::saveGIF(
+#  expr = {
+#    plot(ratioGraph)
+#    plot(ratioGraph15)
+#    plot(ratioGraph2)
+#    plot(ratios3graphline)
+#    plot(ratios4graphCheck)
+#    plot(ratios4graph)
+#  },
+#  movie.name = "estimation_process.gif"
+#)
+```
+
+![](estimation_process.gif)
 
 ### Final Estimation Table
 Now that we have mathematically smoothed the data, lets take a look at the final output table. 
 
 ```{r finaltables, echo = FALSE, message = FALSE, warning = FALSE}
 r_table4 <- ratioTable4 %>%
-  pivot_wider(c(FTGROUP,PkOk),names_from = areaNum, values_from= ratio4)
+  pivot_wider(c(FTGROUP,PkOk),names_from = AreaType, values_from= Ratio4)
 
 groups_d4 <- r_table4 %>%
-  filter(PkOk == "dt") %>% select(-PkOk)
+  filter(PkOk == "Average") %>% select(-PkOk)
 groups_p4 <- r_table4 %>%
-  filter(PkOk == "pk") %>% select(-PkOk)
+  filter(PkOk == "Peak") %>% select(-PkOk)
 groups_o4 <- r_table4 %>%
-  filter(PkOk == "ok") %>% select(-PkOk)
+  filter(PkOk == "Off-Peak") %>% select(-PkOk)
 
 kbl(groups_d4,
     caption = "Estimated Ratios -- FT Breakdown All Areatypes -- AVG",) %>%
@@ -863,12 +894,14 @@ kbl(groups_o4,
 ### Write Table for TDM Model
 Now that we have the final estimation table, we have to merge together the peak and off peak data and create an input table for the TDM to read. We do this below, as well as export to a csv file.
 
-```{r}
+```{r, include == FALSE, message=FALSE, warning=FALSE}
+names(groups_p4)[1] = ";FTGROUP"
 names(groups_p4)[2] = "PK1"
 names(groups_p4)[3] = "PK2"
 names(groups_p4)[4] = "PK3"
 names(groups_p4)[5] = "PK4"
 names(groups_p4)[6] = "PK5"
+names(groups_o4)[1] = ";FTGROUP"
 names(groups_o4)[2] = "OK1"
 names(groups_o4)[3] = "OK2"
 names(groups_o4)[4] = "OK3"
