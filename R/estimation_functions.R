@@ -25,3 +25,25 @@ round_df <- function(x, digits) {
   x[numeric_columns] <-  round(x[numeric_columns], digits)
   x
 }
+
+
+
+
+
+#same function as above but for validation
+clean_gtfs_joint_data_validation <- function(gtfs_with_tdm_lines, maxSpeedDif, maxDistance){
+  gtfs_with_tdm_lines %>%
+    #filter out missing values
+    filter(!is.na(FT), !is.na(aveSpeed)) %>%
+    #select only needed attributes
+    select(LabelNum, Label, PkOk, stop_sequence, FT, FTCLASS, AREATYPE, aveTimepoint, aveDistance, aveSpeed, P_SPEED1, O_SPEED1, dist) %>%
+    # determine modeled and observed speed
+    mutate(Modeled = ifelse(PkOk == "pk", P_SPEED1, O_SPEED1),
+           Observed = aveSpeed) %>%
+    # filter out speed discrepancies of larger than 30 mph and distances larger than 2500 meters
+    mutate(dif = abs(Observed - Modeled)) %>%
+    mutate(filterout = ifelse(dif > maxSpeedDif, TRUE, 
+                              ifelse(dist > maxDistance, TRUE, FALSE))) %>%
+    filter(filterout == FALSE)
+}
+

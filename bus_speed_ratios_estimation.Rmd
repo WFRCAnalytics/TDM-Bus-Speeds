@@ -35,11 +35,20 @@ source("R/estimation_functions.R")
 ```
 
 ## Introduction 
-### Purpose
+### Introduction
 This Rmarkdown is for estimating new traffic to bus speed ratios using traffic speeds from an output congested TDM network and GTFS bus schedule data. The traffic to bus speed ratios represent the speed ratio for which buses travel in the TDM network. In other words, compared to how fast traffic moves in the TDM, what ratio of that speed will buses travel?
 
-### Current Ratios
+### Inputs
+Four main inputs are used to complete the analysis, estimation, and validation in this file. The first is a shapefile representing the spatial data of the distribution network we use to extract traffic speed data. The second is a dbf file representing transit speed data for the matching distribution network used in the shapefile. This is needed to determine which which links among all the link buses actually traverse along. The third file is an already manipulate summary dataset of gtfs speed data. The last file is a table describing the conversion between UTA, GTFS, and TDM bus routes nomenclature.
 
+```{r inputs, message = FALSE, warning = FALSE}
+tdmshpfile <- "data/TDM/Distrib_Network/Distrib_Network__Summary.shp"
+transit_line_file <- "data/TDM/Distrib_Network/_v832_SE19_Net19_2_OD_Station_Detail.dbf"
+gtfs_summary_data <- tar_read(speed_sums)
+tdm_uta_conversion <- tar_read(tdm_uta_conversion)
+```
+
+### Current Ratios
 The current ratios being used to determining TDM bus travel speeds are as follows:
 
 ```{r currentratios, echo=FALSE}
@@ -76,13 +85,14 @@ The data munging required for estimation is slightly complicated, and so the out
     
       b. Also do this where period is not acounted for.
 
-## Step 1
-### Prepare TDM Data
+## Analysis
+### Analysis
+In this section, we run through the 4 steps described in the introduction. This will allow us to compare TDM congested speeds with GTFS data points. We compare these two datasets and create summary tables to decide which grouping set we should use for ratio estimation.
+
+### Step 1 - Prepare TDM Data
 Before matching TDM attributes to the GTFS link, we need to prepare the TDM data. First, we read in the Distribution Network Link SHP with the needed attributes. 
   
 ```{r tdmprep, warning=FALSE, message=FALSE}
-tdmshpfile <- "data/TDM/Distrib_Network/Distrib_Network__Summary.shp"
-
 tdmlinkshp <- st_read(tdmshpfile, quiet = TRUE) %>%
   select(LINKID, FT, FTCLASS, AREATYPE, DIRECTION, AM_SPD, MD_SPD, geometry, ATYPENAME, ATYPEGRP, PM_SPD, EV_SPD, EV_SPD, DY_SPD)
 paged_table(tdmlinkshp)
@@ -92,9 +102,7 @@ After reading in the SHP data, we need to filter the link dataset to only includ
 
 ```{r tdmroutes, warning=FALSE,message=FALSE}
 tdm_link_shp_attributes <- tdmlinkshp  %>% as_tibble()
-tdm_uta_conversion <- tar_read(tdm_uta_conversion)
 
-transit_line_file <- "data/TDM/Distrib_Network/_v832_SE19_Net19_2_OD_Station_Detail.dbf"
 tdm_summary_all <- read.dbf(transit_line_file) %>%
   group_by(MODE,NAME,NAMEID) %>%
   mutate(B = lead(A)) %>%
@@ -109,10 +117,11 @@ tdm_summary_all <- read.dbf(transit_line_file) %>%
   st_transform(4326)
 ```
 
-### Prepare GTFS Data
+### Step 1 - Prepare GTFS Data
 The input TDM link shapefile already has link id, functional class, areatype, compass direction, and peak and off-peak speeds so no more manipulation is needed to prepare that input. Now, we read in the GTFS data of corresponding attributes. In the gtfs_bus_speeds.Rmd and gtfs_functions.R, a lot of data munging has already been completed, so we read in the partially manipulated GTFS data.
 
 ```{r gtfsprep}
+#also read in inputs section
 gtfs_summary_data <- tar_read(speed_sums)
 ```
 
@@ -174,7 +183,7 @@ leaflet() %>%
   #                 color = "Blue")
 ```
 
-### Combine TDM and GTFS Data
+### Step 1- Combine TDM and GTFS Data
 Now that both TDM and GTFS spatial objects contain the correct information, we are almost ready to merge the TDM speed data to the GTFS links. First, we create a centroid object for all the GTFS polylines. These centroids will be used to find the closest TDM link to that GTFS polyline. 
 
 ```{r gtfscentroids, warning=FALSE, message=FALSE}
@@ -251,18 +260,14 @@ leaflet() %>%
   )
 ```
 
-
-
-### Delete Unreasonable or Mismatched Data
+### Step 1 - Delete Unreasonable or Mismatched Data
 In some cases, when doing the matching process some GTFS links were not matched with a TDM link. Therefore, there are some GTFS links with empty values. We must filter those out before calculating the ratios. There are also GTFS links that did get TDM attributes, but the distance at which they received data is unreasonably far. Therefore, we must also filter out any link that received TDM data from too far away. Lastly, some of the GTFS speed calculations were not perfect. So in addition, we filter out any speed calculation that doesn't make sense (i.e. a bus speed traveling 50mph faster or slower than actual road speeds). The distance and speed filter is based on arbitrary numbers, and can be changed later on if these ones don't make sense.
 
 ```{r}
 gtfs_with_tdm_clean <- clean_gtfs_joint_data(gtfs_with_tdm_lines, 30, 2500)
 ```
 
-
-## Step 2-4
-### Link Travel Traverse Time
+### Step 2 - Link Travel Traverse Time
 Now that we have a dataset of all the GTFS links with TDM speed data, we need to calculate the modeled link traverse time using the GTFS distance. The GTFS link traverse time has already been calculated. This step is completed below.
 
 ```{r traversetime}
@@ -271,7 +276,7 @@ traversetime <- gtfs_with_tdm_clean %>%
          ObservedTime = aveDistance / Observed * 3600)
 ```
 
-### Cumulative Link Travel Traverse Time
+### Step 3 & 4 - Cumulative Link Travel Traverse Time
 Now that we have link traverse time for modeled and observed, we can calculate the summed traverse time by period and functional classificiation and area type. Before doing this however, we need to create the option to group the functional types together by the existing groupings. This is done below.
 
 ```{r ftg}
@@ -302,6 +307,7 @@ traversetime_ftg <- traversetime %>%
 We now have all the groupings that we need. Below, we create various summary tables that group the travel times in different ways. We also calculate the ratios at the same time. These ratios are displayed on the Results tab.
 
 #### 1. Previous Breakdown
+The first summary table that we want to create is a comparison between old ratios and new ratios -- in other words, the code below summarizes the data and calculated ratios for the exact same groupings used before.
 
 ```{r group0, message=FALSE, warning=FALSE}
 group0_dt <- traversetime_ftg %>%
@@ -328,6 +334,7 @@ group0_ok <- group0_pkok %>%
 
 
 #### 2. All Functional Types, All Area Types
+The next grouping is for all functional types and all area types. Every single FT value is separate as well as area type.
 
 ```{r sumtime, wanring=FALSE, message=FALSE}
 group1_pkok <- traversetime_ftg %>%
@@ -373,6 +380,8 @@ groups <- left_join(r_group1,group2) %>%
 ```
 
 #### 3. Grouped Functional Types All Area Types
+The last grouping we do is dividing up into 6 groups, as shown between. It's similar to the previous grouping except centroid connectors and collectors are grouped together. 
+
 ```{r groupagain, warning=FALSE, message=FALSE}
 groupedfts <- traversetime_ftg %>%
   mutate(
@@ -440,11 +449,13 @@ groups4 <- left_join(r_group3,group4) %>%
   rename("All" = ratio)
 ```
 
-
-
-## Results
+## Ratio Table Options
+### Ratio Table Options
+In this section, we look at the calculated ratio tables for the three different groupings we created in the Analysis section. As a reminder, the three different groupings are original breakdown, all functional types and all area types, and grouped functional types and all area types.
 
 ### Original Breakdown
+Below is the table comparing the old ratio value with the average, peak, and off peak ratio value we just calculated. As you can see, many of these values are pretty close except for ramps and freeways. Ramps clearly is way off in our new calculation, and freeways is much lower than expected.
+
 ```{r originaltable, echo = FALSE, message=FALSE, warning = FALSE}
 group0_compare <- left_join(df,group0_dt, by = c("FTGCLASS")) %>%
   rename("OldRatio" = "AutoSpeedRatio") %>%
@@ -461,8 +472,9 @@ kbl(group0_compare,
   kable_classic(full_width = F, html_font = "Cambria")
 ```
 
-
 ### All Functional Types All Area Types
+The following tables show the ratios calculated without first grouping the functional types. A lot can be seen here, but a few observations are that ramps are way off and freeways are lower than expected. 
+
 ```{r table2, echo = FALSE}
 groupss <- groups %>%
   select(1,2,3,6,5,7,4,8) %>%
@@ -488,6 +500,8 @@ kbl(groups_ok,
 ```
 
 ### Grouped Functional Types All Area Types
+The last ratio table set we present are with grouped functional types. Looking at these values, we believe these are the next step in the bus speed ratio process. Excluding the ramp ratios, the other groupings seem to make sense. It would also make sense to separate by period, because it seems peak and off-peak are different enough. 
+
 ```{r table3, echo = FALSE}
 groupss4 <- groups4 %>%
   select(-All) %>%
@@ -513,103 +527,11 @@ kbl(groups_ok4,
   kable_classic(full_width = F, html_font = "Cambria")
 ```
 
-### Looking at Ramps
-All the ratios look reasonable, but the ratios related to FT-Ramps looks widely incorrect. Lets take a deeper look at where these ramps are, and why our analysis is saying the buses are traveling 1.5X faster than the auto speeds. 
-
-```{r ramps}
-tdm_ramps <- tdm_summary_all %>%
-  filter(FT %in% c(41,42))
-
-gtfsp_ramps <- gtfs_with_tdm %>%
-  ungroup()%>%
-  mutate(long = unlist(map(gtfs_with_tdm$midlinep,1)),
-           lat = unlist(map(gtfs_with_tdm$midlinep,2))) %>%
-  filter(LINKID %in% tdm_ramps$LINKID)
-
-#gtfsl_test <- gtfs_with_tdm_lines %>%
-#  filter(LabelNum == 45,
-#         PkOk == period) %>%
-#  st_as_sf()
-```
-
-
-```{r rampmap, echo = FALSE}
-leaflet() %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
-  addPolylines(
-    data = tdm_ramps$geometry,
-    popup = paste("DIR: ", tdm_ramps$compass, "<br>",
-                  "AM Speed: ", tdm_ramps$AM_SPD, "<br>",
-                  "LINKID: ", tdm_ramps$LINKID, "<br>",
-                  "LINKSEQ1: ", tdm_ramps$LINKSEQ1)
-  ) %>%
-  addCircleMarkers(lng = gtfsp_ramps$long, 
-      lat = gtfsp_ramps$lat,
-      popup = paste("DIR: ", gtfsp_ramps$compass, "<br>",
-                    "AM Speed: ", gtfsp_ramps$AM_SPD, "<br>",
-                    "GTFS Speed: ", gtfsp_ramps$aveSpeed, "<br>",
-                    "LINKID: ", gtfsp_ramps$LINKID, "<br>",
-                    "LINKSEQ1: ", gtfsp_ramps$LINKSEQ1),
-      color = "red"
-  ) 
-#  addPolylines(
-#    data = gtfsl_test$geometry,
-#    popup = paste("DIR: ", gtfsl_test$compass, "<br>",
-#                  "AM Speed: ", gtfsl_test$AM_SPD, "<br>",
-#                  "LINKSEQ1: ", gtfsl_test$LINKID, "<br>"),
-#    color = "red"
-#  )
-```
-
-### Looking at Freeways
-
-```{r freeways}
-tdm_freeways <- tdm_summary_all %>%
-  filter(FT %in% c(20:26,30:40))
-
-gtfsp_freeways <- gtfs_with_tdm %>%
-  ungroup()%>%
-  mutate(long = unlist(map(gtfs_with_tdm$midlinep,1)),
-           lat = unlist(map(gtfs_with_tdm$midlinep,2))) %>%
-  filter(LINKID %in% tdm_freeways$LINKID)
-
-#gtfsl_test <- gtfs_with_tdm_lines %>%
-#  filter(LabelNum == 45,
-#         PkOk == period) %>%
-#  st_as_sf()
-```
-
-
-```{r freewaymap, echo = FALSE}
-leaflet() %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
-  addPolylines(
-    data = tdm_freeways$geometry,
-    popup = paste("DIR: ", tdm_freeways$compass, "<br>",
-                  "AM Speed: ", tdm_freeways$AM_SPD, "<br>",
-                  "LINKID: ", tdm_freeways$LINKID, "<br>",
-                  "LINKSEQ1: ", tdm_freeways$LINKSEQ1)
-  ) %>%
-  addCircleMarkers(lng = gtfsp_freeways$long, 
-      lat = gtfsp_freeways$lat,
-      popup = paste("DIR: ", gtfsp_freeways$compass, "<br>",
-                    "AM Speed: ", gtfsp_freeways$AM_SPD, "<br>",
-                    "GTFS Speed: ", gtfsp_freeways$aveSpeed, "<br>",
-                    "LINKID: ", gtfsp_freeways$LINKID, "<br>",
-                    "LINKSEQ1: ", gtfsp_freeways$LINKSEQ1),
-      color = "red"
-  ) 
-#  addPolylines(
-#    data = gtfsl_test$geometry,
-#    popup = paste("DIR: ", gtfsl_test$compass, "<br>",
-#                  "AM Speed: ", gtfsl_test$AM_SPD, "<br>",
-#                  "LINKSEQ1: ", gtfsl_test$LINKID, "<br>"),
-#    color = "red"
-#  )
-```
+Since we have decided to use these tables as a starting point, we still need to estimate the missing values, and smooth out the estimation. This is done on the estimation tab.
 
 ## Estimation
-After reviewing the various results, we have decided to use ratios from the grouped functional classification divided by area type and period (The third set of tables labeled "Grouped Functional Types All Area Types). We have decided to ignore all ramp ratios however, and use the freeway ratios instead. This is because the ramp ratios are unrealistic and there wasn't enough data to determine those accurately .
+### Estimation
+After reviewing the various ratio table options, we have decided to use ratios from the grouped functional classification divided by area type and period (The third set of tables labeled "Grouped Functional Types All Area Types"). We have decided to ignore all ramp ratios however, and use the freeway ratios instead. This is because the ramp ratios are unrealistic and there wasn't enough data to determine those accurately .
 
 Although we have chosen the set of tables to use for the ratios, we still need to smooth out the ratios and fill in the missing values by interpolating based on the values we currently have. 
 
@@ -847,6 +769,40 @@ ratios4graphCheck <- ggplot(ratioTable4) +
 ratios4graphCheck
 ```
 
+### Step Six -- Final Ratios
+In this last step, we make just a few adjustments to the mathematically smooth line ratios, to ensure a coherent slope/change between area types of the same functional groupings. These changes are made below, and represent the final ratios to be used.
+
+```{r, message = FALSE, warning = FALSE, include = FALSE}
+ratioTable5 <- ratioTable4 %>%
+  mutate(Ratio5 = case_when(
+    ftat == 151 ~ .61,
+    ftat == 144 ~ .76,
+    ftat == 145 ~ 0.79,
+    ftat == 251 ~ .46,
+    ftat == 252 ~ .47,
+    ftat == 255 ~ .64,
+    ftat == 245 ~ .69,
+    ftat == 351 ~ .61,
+    ftat == 344 ~ .76,
+    ftat == 345 ~ .79,
+    TRUE ~ Ratio4
+  ))
+```
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+ratios5graph <- ggplot(ratioTable5) +
+  aes(x = AreaType, y = Ratio5, color = FTGROUP) +
+  facet_wrap(~PkOk)+
+  geom_point(size = 2)+ 
+  scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
+  theme_bw() + 
+  geom_line()
+ratios5graph
+```
+
+
+
+
 ### Progress
 Lets make a GIF of the progress we made!
 ```{r gif, include = FALSE, warning=FALSE, message=FALSE}
@@ -857,7 +813,7 @@ Lets make a GIF of the progress we made!
 #    plot(ratioGraph2)
 #    plot(ratios3graphline)
 #    plot(ratios4graphCheck)
-#    plot(ratios4graph)
+#    plot(ratios5graph)
 #  },
 #  movie.name = "estimation_process.gif"
 #)
@@ -869,8 +825,8 @@ Lets make a GIF of the progress we made!
 Now that we have mathematically smoothed the data, lets take a look at the final output table. 
 
 ```{r finaltables, echo = FALSE, message = FALSE, warning = FALSE}
-r_table4 <- ratioTable4 %>%
-  pivot_wider(c(FTGROUP,PkOk),names_from = AreaType, values_from= Ratio4)
+r_table4 <- ratioTable5 %>%
+  pivot_wider(c(FTGROUP,PkOk),names_from = AreaType, values_from= Ratio5)
 
 groups_d4 <- r_table4 %>%
   filter(PkOk == "Average") %>% select(-PkOk)
@@ -910,4 +866,307 @@ names(groups_o4)[6] = "OK5"
 finalt <- left_join(groups_p4,groups_o4)
 #write_csv(finalt,"outputs/Estimation/bus_speed_ratios.csv")
 ```
+
+## Validation
+### Validation
+After creating a full table representing the bus speed ratios by functional grouping, period, and area type we need to test how they actually worked. So, we updated the *05_Skim_Tran.s* voyager script to pull from our new calculated ratios and ran the TDM model again! This section runs some test to validate our ratios.
+
+### Cumulative Travel Time Validation
+One idea for validating the bus speeds is to run a similar analysis process we did in the Analysis tab, but steal the bus speed values from the links and compare those with the GTFS data. This process is explained in a similar outline of 4 steps.
+
+  - *STEP 1*: Match the calculated transit speed, functional class, and area type of the nearest TDM link to each GTFS link. 
+  
+      a. Determine period (peak/off-peak) and compass direction (NB,SB,EB,WB) for all TDM links and GTFS links
+      
+      b. Join TDM speed attributes to GTFS links by period and compass direction
+      
+      c. Delete all GTFS links that were unable to match with a TDM link or matched with a link way too far away.
+      
+  - *STEP 2*: Using the GTFS link distance and the TDM speed, calculate the modeled link travel traverse time. Also calculate the GTFS observed link travel traverse time.
+  
+  - *STEP 3*: Calculate the cumulative link travel traverse time for both observed and modeled data by summing together travel times by period and functional classification and area type.
+  
+  - *STEP 4*: Calculate the modeled bus speed to observed bus speed ratio by dividing the cumulative travel traverse times. Do this by period and functional classification and area type. 
+
+As you can see, the steps are basically the same, except we steal the newly calculated bus speeds off of the TDM instead of the congested speeds. We do not show the results on this document, because its basically the same process, but we do show the results below.
+
+```{r, include = FALSE, warning=FALSE, message=FALSE}
+tdmshpfile_nr <- "data/TDM/Distrib_Network_New_Ratios/Distrib_Network__Summary.shp"
+transit_line_file_nr <- "data/TDM/Distrib_Network_New_Ratios/_v9_SE19_Net19_2_OD_Station_Detail.dbf"
+```
+
+```{r, include = FALSE, warning=FALSE, message=FALSE}
+tdmlinkshp_nr <- st_read(tdmshpfile_nr, quiet = TRUE) %>%
+  select(LINKID, FT, FTCLASS, AREATYPE, DIRECTION, AM_SPD, MD_SPD, 
+         geometry, ATYPENAME, ATYPEGRP, PM_SPD, EV_SPD, EV_SPD, DY_SPD)
+tdm_link_shp_attributes_nr <- tdmlinkshp_nr  %>% 
+  as_tibble()
+tdm_summary_all_nr <- read.dbf(transit_line_file_nr) %>%
+  group_by(MODE,NAME,NAMEID) %>%
+  mutate(B = lead(A)) %>%
+  select(MODE,NAMEID,NAME,ONEWAY,LINKSEQ1,LINKSEQ2,A,B,STOPS,DIST,
+         P_SPEED1,O_SPEED1) %>%
+  mutate(LINKID = paste0(A,"_",B)) %>%
+  left_join(tdm_link_shp_attributes_nr) %>%
+  filter(!is.na(FT)) %>%
+  left_join(tdm_uta_conversion, by = c("NAME"="TDMRoute")) %>%
+  select(-UTARoute,-Notes,-GTFSRoute) %>%
+  mutate(compass = DIRECTION) %>%
+  st_as_sf(crs = 26912) %>%
+  st_transform(4326)
+```
+
+```{r, include = FALSE, warning=FALSE, message=FALSE}
+gtfs_with_tdm_nr <- join_to_gtfs(tdm_summary_all_nr,gtfs_summary_centroids) %>%
+  select(-Label.1, -LabelNum.1, -compass.1)
+
+gtfs_with_tdm_short_nr <- gtfs_with_tdm_nr %>%
+  select(LINKID, centroid_id,FT,FTCLASS,AREATYPE,AM_SPD,MD_SPD,P_SPEED1,O_SPEED1,dist, uniquerow) %>%
+  as_tibble() %>% select(-midlinep)
+
+gtfs_with_tdm_lines_nr <- gtfs_summary_all %>%
+  left_join(gtfs_with_tdm_short_nr, by = c("uniquerow")) 
+```
+
+```{r, include = FALSE, warning=FALSE, message=FALSE}
+labelnum <- 45
+period <- "pk"
+
+tdm_test_nr <- tdm_summary_all_nr %>%
+  filter(LabelNum == 45) %>%
+  st_as_sf()
+gtfsp_test_nr <- gtfs_with_tdm_nr %>%
+    ungroup()%>%
+  mutate(long = unlist(map(gtfs_with_tdm_nr$midlinep,1)),
+           lat = unlist(map(gtfs_with_tdm_nr$midlinep,2))) %>%
+  filter(LabelNum == 45,
+         PkOk == period)
+gtfsl_test_nr <- gtfs_with_tdm_lines_nr %>%
+  filter(LabelNum == 45,
+         PkOk == period) %>%
+  st_as_sf()
+```
+
+```{r, include = FALSE, warning=FALSE, message=FALSE}
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolylines(
+    data = tdm_test_nr$geometry,
+    popup = paste("DIR: ", tdm_test_nr$compass, "<br>",
+                  "AM Speed: ", tdm_test_nr$AM_SPD, "<br>",
+                  "LINKID: ", tdm_test_nr$LINKID, "<br>",
+                  "LINKSEQ1: ", tdm_test_nr$LINKSEQ1)
+  ) %>%
+  addCircleMarkers(lng = gtfsp_test_nr$long, 
+      lat = gtfsp_test_nr$lat,
+      popup = paste("DIR: ", gtfsp_test_nr$compass, "<br>",
+                    "AM Speed: ", gtfsp_test_nr$AM_SPD, "<br>",
+                    "LINKID: ", gtfsp_test_nr$LINKID, "<br>",
+                    "LINKSEQ1: ", gtfsp_test_nr$LINKSEQ1),
+      color = "red"
+  ) %>%
+  addPolylines(
+    data = gtfsl_test_nr$geometry,
+    popup = paste("DIR: ", gtfsl_test_nr$compass, "<br>",
+                  "AM Speed: ", gtfsl_test_nr$AM_SPD, "<br>",
+                  "LINKSEQ1: ", gtfsl_test_nr$LINKID, "<br>"),
+    color = "red"
+  )
+```
+
+```{r, include = FALSE, warning=FALSE, message=FALSE}
+gtfs_with_tdm_clean_nr <- clean_gtfs_joint_data_validation(gtfs_with_tdm_lines_nr, 30, 2500)
+
+traversetime_nr <- gtfs_with_tdm_clean_nr %>%
+  mutate(ModeledTime = aveDistance / Modeled * 3600, 
+         ObservedTime = aveDistance / Observed * 3600)
+
+traversetime_ftg_nr <- traversetime_nr %>%
+  as_tibble() %>% select(-geometry) %>%
+  mutate(
+      FTG = case_when(
+        FT %in% c(1,4:10) ~ 1,       # collectors & locals
+        FT == 3 ~  2,                # minor arterials
+        FT == 2 ~ 3,                 # principal arterials
+        FT %in% c(11:19) ~ 4,        # expressways
+        FT %in% c(20:26,30:40) ~ 5,  # freeways
+        FT %in% c(28:29,41:42) ~ 6,  # ramps
+        TRUE ~ 0 
+    )) %>%
+    mutate(
+      FTGCLASS= case_when(
+        FTG == 1 ~ "1-Collectors & Locals",
+        FTG == 2 ~ "2-Minor Arterials",
+        FTG == 3 ~ "3-Principal Arterials",
+        FTG == 4 ~ "4-Expressways",
+        FTG == 5 ~ "5-Freeways",
+        FTG == 6 ~ "6-Ramps",
+        TRUE ~ "None"
+    ))
+```
+
+```{r, include = FALSE, warning=FALSE, message=FALSE}
+group3.2pDist <- traversetime_ftg_nr %>%
+  group_by(PkOk, FTGCLASS, FTG, AREATYPE) %>%
+    summarize(aveDistanceSum = sum(aveDistance))
+
+group3.2dDist <- traversetime_ftg_nr %>%
+  group_by(FTGCLASS, FTG, AREATYPE) %>%
+    summarize(aveDistanceSum = sum(aveDistance)) %>%
+    mutate(PkOk = "dt")
+group3.2Dist <- bind_rows(group3.2pDist,group3.2dDist)
+```
+
+```{r, include = FALSE, message = FALSE, warning = FALSE}
+group3.2p_areaT <- traversetime_ftg_nr %>%
+  group_by(PkOk,AREATYPE) %>%
+  summarize(ModeledTimeSum = sum(ModeledTime),
+            ObservedTimeSum = sum(ObservedTime))
+group3.2d_areaT <- traversetime_ftg_nr %>%
+  group_by(AREATYPE) %>%
+  summarize(ModeledTimeSum = sum(ModeledTime),
+            ObservedTimeSum = sum(ObservedTime)) %>%
+    mutate(PkOk = "dt")
+group3.2_areaT <- bind_rows(group3.2d_areaT,group3.2p_areaT) %>%
+  mutate(ratio = ModeledTimeSum / ObservedTimeSum,
+         pctError = (ObservedTimeSum - ModeledTimeSum) / ObservedTimeSum * 100) %>%
+  ungroup() %>%
+  filter(!is.na(ratio)) %>%
+  mutate(ratio = round(ratio,3),
+         pctError = round(pctError,3))
+
+area_dt_p <- group3.2_areaT %>%
+  pivot_wider(c(PkOk),names_from = AREATYPE, values_from= ratio) %>%
+  mutate(FTGCLASS = "6-All_FT")
+area_dt_r <- group3.2_areaT %>%
+    pivot_wider(c(PkOk),names_from = AREATYPE, values_from= pctError) %>%
+  mutate(FTGCLASS = "6-All_FT")
+
+megaval_p <- traversetime_ftg_nr %>%
+  group_by(PkOk) %>%
+  summarize(ModeledTimeSum = sum(ModeledTime),
+            ObservedTimeSum = sum(ObservedTime))
+megaval <- traversetime_ftg_nr %>%
+  summarize(ModeledTimeSum = sum(ModeledTime),
+            ObservedTimeSum = sum(ObservedTime)) %>%
+  mutate(PkOk = "dt") %>%
+  bind_rows(megaval_p) %>%
+  mutate(All_R = ModeledTimeSum / ObservedTimeSum,
+         All_P = abs(ObservedTimeSum - ModeledTimeSum) / ObservedTimeSum * 100) %>%
+  mutate(FTGCLASS = "6-All_FT") %>%
+  select(6,3,4,5)
+megaval_r <- megaval %>% select(-All_P)
+megaval_p <- megaval %>% select(-All_R)
+
+group3.2p_ftgT <- traversetime_ftg_nr %>%
+  group_by(PkOk,FTGCLASS) %>%
+  summarize(ModeledTimeSum = sum(ModeledTime),
+            ObservedTimeSum = sum(ObservedTime))
+group3.2d_ftgT <- traversetime_ftg_nr %>%
+  group_by(FTGCLASS) %>%
+  summarize(ModeledTimeSum = sum(ModeledTime),
+            ObservedTimeSum = sum(ObservedTime)) %>%
+    mutate(PkOk = "dt")
+group3.2_ftgT <- bind_rows(group3.2d_ftgT,group3.2p_ftgT) %>%
+  mutate(ratio = ModeledTimeSum / ObservedTimeSum,
+         pctError = (ObservedTimeSum - ModeledTimeSum) / ObservedTimeSum * 100) %>%
+  ungroup() %>%
+  filter(!is.na(ratio)) %>%
+  mutate(ratio = round(ratio,3),
+         pctError = round(pctError,3)) %>%
+  rename("All_R" = "ratio", "All_P" = "pctError")
+```
+
+```{r, include = FALSE, warning=FALSE, message=FALSE}
+group3.2p <- traversetime_ftg_nr %>%
+  group_by(PkOk, FTGCLASS, FTG, AREATYPE) %>%
+    summarize(ModeledDistSum = sum(ModeledTime),
+              ObservedDistSum = sum(ObservedTime))
+group3.2d <- traversetime_ftg_nr %>%
+  group_by(FTGCLASS, FTG, AREATYPE) %>%
+    summarize(ModeledDistSum = sum(ModeledTime),
+              ObservedDistSum = sum(ObservedTime)) %>%
+    mutate(PkOk = "dt")
+group3.2 <- bind_rows(group3.2d,group3.2p) %>%
+  mutate(Group = 3, GroupName = "Grouped FT, All AT") %>%
+  mutate(ratio = ModeledDistSum / ObservedDistSum,
+         pctError = (ObservedDistSum - ModeledDistSum) / ObservedDistSum * 100) %>%
+  ungroup() %>%
+  filter(!is.na(ratio)) %>%
+  mutate(ratio = round(ratio,3),
+         pctError = round(pctError,3)) %>%
+  select(PkOk,FTGCLASS, FTG, AREATYPE, pctError, ratio)
+
+r_group3.2 <- group3.2 %>% select(-pctError) %>%
+  pivot_wider(c(FTGCLASS,FTG,PkOk),names_from = AREATYPE, values_from= ratio) %>%
+  select(2,1,3,8,4,5,6,7)
+pe_group3.2 <- group3.2 %>% select(-ratio) %>%
+  pivot_wider(c(FTGCLASS,FTG,PkOk),names_from = AREATYPE, values_from= pctError) %>%
+  select(2,1,3,8,4,5,6,7)
+```
+
+```{r, include = FALSE}
+ratioValidation <- r_group3.2 %>%
+  filter(FTG != 6) %>%
+  left_join(group3.2_ftgT, by = c("FTGCLASS","PkOk")) %>% select(-ModeledTimeSum, -ObservedTimeSum, -All_P) %>%
+  bind_rows(area_dt_r) %>%
+  left_join(megaval_r, by = c("FTGCLASS","PkOk")) %>%
+  mutate(All_AT = ifelse(is.na(All_R.x), round(All_R.y,3), round(All_R.x,3))) %>%
+  select(-All_R.y, -All_R.x)
+pctErrorValidation <- pe_group3.2 %>%
+  filter(FTG != 6) %>%
+  left_join(group3.2_ftgT,  by = c("FTGCLASS","PkOk")) %>% select(-ModeledTimeSum, -ObservedTimeSum, -All_R) %>%
+  bind_rows(area_dt_p) %>%
+  left_join(megaval_p, by = c("FTGCLASS","PkOk")) %>%
+    mutate(All_AT = ifelse(is.na(All_P.x), round(All_P.y,3), round(All_P.x,3))) %>%
+  select(-All_P.y, -All_P.x)
+
+rvd <- ratioValidation %>%
+  filter(PkOk == "dt") %>% select(-PkOk, -FTG) %>% arrange(FTGCLASS)
+rvp <- ratioValidation %>%
+  filter(PkOk == "pk") %>% select(-PkOk, -FTG) %>% arrange(FTGCLASS)
+rvo <- ratioValidation %>%
+  filter(PkOk == "ok") %>% select(-PkOk, -FTG) %>% arrange(FTGCLASS)
+pvd <- pctErrorValidation %>%
+  filter(PkOk == "dt") %>% select(-PkOk, -FTG) %>% arrange(FTGCLASS)
+pvp <- pctErrorValidation %>%
+  filter(PkOk == "pk") %>% select(-PkOk, -FTG) %>% arrange(FTGCLASS)
+pvo <- pctErrorValidation %>%
+  filter(PkOk == "ok") %>% select(-PkOk, -FTG) %>% arrange(FTGCLASS)
+
+```
+
+
+#### Results
+These are for the average results.
+```{r, echo = FALSE}
+kbl(rvd,
+    caption = "Average Ratio Validation",) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+kbl(pvd,
+    caption = "Average Pct Error Validation",) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+These are for the peak results.
+```{r, echo = FALSE}
+kbl(rvp,
+    caption = "Peak Ratio Validation",) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+kbl(pvp,
+    caption = "Peak Pct Error Validation",) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+These are for the off-peak results.
+```{r, echo = FALSE}
+kbl(rvo,
+    caption = "Off-Peak Ratio Validation",) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+kbl(pvo,
+    caption = "Off-Peak Pct Error Validation",) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+### Link Speed Validation
 
