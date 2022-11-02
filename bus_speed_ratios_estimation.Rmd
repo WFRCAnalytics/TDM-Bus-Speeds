@@ -902,6 +902,7 @@ tdmlinkshp_nr <- st_read(tdmshpfile_nr, quiet = TRUE) %>%
 tdm_link_shp_attributes_nr <- tdmlinkshp_nr  %>% 
   as_tibble()
 tdm_summary_all_nr <- read.dbf(transit_line_file_nr) %>%
+  filter(MODE %in% c(4,5,6,9)) %>%
   group_by(MODE,NAME,NAMEID) %>%
   mutate(B = lead(A)) %>%
   select(MODE,NAMEID,NAME,ONEWAY,LINKSEQ1,LINKSEQ2,A,B,STOPS,DIST,

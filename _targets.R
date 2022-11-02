@@ -14,14 +14,29 @@ library(hms)
 library(geotidy)
 library(sfheaders)
 
-
 # Source Scripts for All Analyses
 source("R/bus_speeds.R")
 source("R/bus_speeds_visuals.R")
 source("R/gtfs_functions.R")
 
+
+#' ##################################################################################################################################################################################################
+#' Explanation of Targets
+#' ##################################################################################################################################################################################################
+#' The first two validation analyses present two validations done on the TDM bus speeds based on the
+#' current ratios as of September 2022. The first validation used UTA Bus Stop points as the primary 
+#' dataset from which to compare TDM bus speed results. This was not as reliable as we hoped, so the
+#' second validation is done from UTA GTFS data points. THis was more reliable as the data was processed
+#' from start to finish. 
+#' 
+#' The results of the first two validation analyses let us to re-estimate bus speed ratios for the TDM. 
+#' This estimation process is conducted in the bus_speed_ratios_estimation.Rmd file. The tertiary validation
+#' analysis presented in this targets script are targets used to validate those NEW TDM bus speeds.
+
+
+
 #####################################################################################################################################################################################################
-# Primary Analysis # UTA Bus Stop Points #
+# Primary Validation # UTA Bus Stop Points #
 #####################################################################################################################################################################################################
 
 data_targets <- tar_plan(
@@ -113,9 +128,14 @@ visual_targets<- tar_plan(
 #errScatterPlots <- tar_read(errScatterPlots)
 #makePNGs(errScatterPlots, "outputs/ScatterPlotSpeeds_Error")
 
+#' Conclusions:
+#' From the output PNG files we created, the validation is inconclusive, and we believe that there is no
+#' clear evidence that the current ratios are doing a sufficient job of predicting bus travel speeds. As
+#' a result, we do another validation using GTFS stop schedule data.
+
 
 #####################################################################################################################################################################################################
-# Secondary Analysis # GTFS Stop Schedule Data #
+# Secondary Validation # GTFS Stop Schedule Data #
 #####################################################################################################################################################################################################
 
 gtfs_targets <- tar_plan(
@@ -157,6 +177,42 @@ gtfs_visual_targets <- tar_plan(
   tar_target(g_errScatterPlots, mapPlots(mutated_gtfs_speeds, "FTG", errorScatterPlotter))
 )
 
+#' Conclusions:
+#' The results of this validation led us to beleive that the current bus speed ratios do not do a well
+#' enough job of predicting accurate bus travel speeds. As a result, we must re-estimate bus speed ratios
+#' to be used in the TDM. This process is done in the bus_speed_ratios_estimation.rmd script. Then, another
+#' validation is completed using those estimates.
+
+
+#####################################################################################################################################################################################################
+# Tertiary Validation # GTFS Stop Schedule Data compared with TDM using New Ratios #
+#####################################################################################################################################################################################################
+
+gtfs_targets_2 <- tar_plan(
+  tar_target(tdm_data_2, read.dbf("data/TDM/Distrib_Network_New_Ratios/_v9_SE19_Net19_2_OD_Station_Detail.dbf") %>%
+               left_join( tdm_uta_conversion, by = c("NAME" = "TDMRoute"))
+  ),
+  tar_target(tdm_segments_2, get_tdm_segments_2("data/TDM/Distrib_Network_New_Ratios/Distrib_Network__Summary.shp")),
+  tar_target(tdm_transit_lines_2, get_transit_lines(tdm_data_2, tdm_segments_2)),
+  
+  tar_target(tdm_lines_compass_2, calculate_tdm_compass(tdm_transit_lines_2)),
+  tar_target(tdm_centroids_compass_2, make_centroids(tdm_lines_compass_2)),
+  tar_target(tdm_centroids_clean2_2, clean_centroids3(tdm_centroids_compass_2)),
+
+  tar_target(join_tdm_gtfs_2, join_gtfs(gtfs_tdm_routes,tdm_centroids_clean2_2)),
+  tar_target(merge_tdm_lines_2, merge_tdm_links(join_tdm_gtfs_2,tdm_lines_compass_2))
+)
+
+gtfs_visual_targets_2 <- tar_plan(
+  tar_target(gtfs_histo_df_2, make_histo_df_2(merge_tdm_lines_2)),
+  tar_target(routeplots_2, plot_routes(gtfs_histo_df_2)),
+  tar_target(joint_gtfs_speeds_2, join_gtfs_speeds_2(merge_tdm_lines_2)),
+  tar_target(mutated_gtfs_speeds_2, mutate_joint_speeds2(joint_gtfs_speeds_2,FTG2)),
+  
+  tar_target(g_descLineGraphs2, mapPlots(mutated_gtfs_speeds_2, "FTG2", descLinePlotter)),
+  tar_target(g_descScatterPlots2, mapPlots(mutated_gtfs_speeds_2, "FTG2", descScatterPlotter))
+)
+
 
 tar_plan(
   
@@ -165,8 +221,14 @@ tar_plan(
   visual_targets,
   
   gtfs_targets,
-  gtfs_visual_targets
+  gtfs_visual_targets,
+  
+  gtfs_targets_2,
+  gtfs_visual_targets_2
   
 )
-
+#g_descLineGraphs2 <- tar_read(g_descLineGraphs2)
+#makePNGs(g_descLineGraphs2, "outputs/DescendingSpeeds_Exact")
+#g_descScatterPlots2 <- tar_read(g_descScatterPlots2)
+#makePNGs(g_descScatterPlots2, "outputs/DescendingSpeeds_Average")
 

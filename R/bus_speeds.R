@@ -12,6 +12,13 @@ get_tdm_segments <- function(shp, loadednet){
     select(A,B, FT_2019, AREATYPE, link_id) %>%
     st_as_sf()
 }
+get_tdm_segments_2 <- function(shp){
+  st_read(shp) %>%
+    #create link id composed of start and end nodes
+    mutate(link_id = paste0(A,"_",B)) %>%
+    select(A,B, FT, AREATYPE, link_id, AM_SPD, MD_SPD, PM_SPD) %>%
+    st_as_sf()
+}
 
 # create UTA Bus Stop point spatial object
 get_uta_points <- function(uta_data){
@@ -151,6 +158,13 @@ clean_centroids2 <- function(tdm_centroids){
     mutate(long = unlist(map(tdm_centroids$midlinep,1)),
            lat = unlist(map(tdm_centroids$midlinep,2)))
 } 
+
+clean_centroids3 <- function(tdm_centroids){
+  tdm_centroids %>%
+    select(centroid_id,link_id,A.x,B.x,MODE,LabelNum,Label,ONEWAY,LINKSEQ1,LINKSEQ2,P_SPEED1,P_SPEED2,O_SPEED1,O_SPEED2,midlinep, FT, AREATYPE,AM_SPD,MD_SPD, compass) %>%
+    mutate(long = unlist(map(tdm_centroids$midlinep,1)),
+           lat = unlist(map(tdm_centroids$midlinep,2)))
+}
 
 
 

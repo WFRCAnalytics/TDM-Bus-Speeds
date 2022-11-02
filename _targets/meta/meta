@@ -1,39 +1,46 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-.Random.seed|object|bc49af4c80bad0d6|||||||||||||||
+.Random.seed|object|4ef086af4dafdf20|||||||||||||||
 analysis_targets|object|830be8ba4ffacb75|||||||||||||||
 average_estimated_speeds|function|033ea0861d84e883|||||||||||||||
-aveScatterPlots|stem|7f102cc5e33dc177|d535abee17cb23f3|2b8b5df1f0f1e7ad|1731014601||t19283.7746326766s|70d2a897b39aa064|5240571|rds|local|vector|||0.44|guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.|
+aveScatterPlots|stem|7f102cc5e33dc177|d535abee17cb23f3|402bf5ac2b73f73a|1731014601||t19298.7471934147s|70d2a897b39aa064|5240571|rds|local|vector|||0.58|1m22mas.tibble was deprecated in tibble 2.0.0.36mℹ39m Please use as_tibble instead.36mℹ39m The signature and semantics have changed, see as_tibble.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.|
 aveScatterPlotter|function|a10da63965af2a5a|||||||||||||||
 calc_centroid_speed_summary|function|be18fc537b244097|||||||||||||||
 calc_centroid_speeds|function|b47f9c4f74ee5f58|||||||||||||||
 calc_segment_speeds|function|a95b0313110ae1bf|||||||||||||||
 calculate_gtfs_compass|function|46ee89049827486e|||||||||||||||
-calculate_tdm_compass|function|52ec8735367bdc9c|||||||||||||||
+calculate_tdm_compass|function|049adc5e99b78404|||||||||||||||
 calculate_time_peak|function|2faa91e14a9bd50f|||||||||||||||
 clean_centroids|function|f877fadfeae33f83|||||||||||||||
 clean_centroids2|function|46f02fdfa8b4327b|||||||||||||||
+clean_centroids3|function|36b7aba648beb0ed|||||||||||||||
 clean_uta_points|function|08f18de7037b2a38|||||||||||||||
 close_uta_points|stem|9155b9b947bbdc29|85475fea33764aba|7c5456aeb42c7177|-2107762045||t19282.8198817354s|c4faa1b3fe9c7de4|119114|rds|local|vector|||7.6||
 data_targets|object|c10b43195552735d|||||||||||||||
-descLineGraphs|stem|3fb1b39900c5ccc4|d58d225625ebca6d|c6975d146b2c21ed|1995523998||t19283.7745930438s|818cd217622b5536|5211358|rds|local|vector|||0.28||
-descLinePlotter|function|7ccc6b451705f32f|||||||||||||||
-descScatterPlots|stem|e77e01b6ca619617|334d7232ec0b50c5|6887980ca15085ee|135205505||t19283.7746122527s|62ad74cb83d33510|5260076|rds|local|vector|||0.31||
-descScatterPlotter|function|306005d71b7fcd72|||||||||||||||
+descLineGraphs|stem|3fb1b39900c5ccc4|d58d225625ebca6d|aa15d4a2daa7c008|1995523998||t19298.7103984622s|818cd217622b5536|5211358|rds|local|vector|||0.3||
+descLinePlotter|function|d5156a08722b3745|||||||||||||||
+descLinePlotter2|function|d6186c746010b44b|||||||||||||||
+descScatterPlots|stem|e77e01b6ca619617|334d7232ec0b50c5|2933bd860fcbc420|135205505||t19298.7138724643s|62ad74cb83d33510|5260076|rds|local|vector|||0.33||
+descScatterPlotter|function|60e55f6142e6b56c|||||||||||||||
 errorScatterPlotter|function|1df8e750121650e4|||||||||||||||
-errScatterPlots|stem|ba19e766bdb0232e|255f5b95616fdc92|7aa332f5d2b243f3|-1533597732||t19283.7745756326s|2e1a108e1d42fdea|5392934|rds|local|vector|||0.32|1m22mas.tibble was deprecated in tibble 2.0.0.36mℹ39m Please use as_tibble instead.36mℹ39m The signature and semantics have changed, see as_tibble.|
+errScatterPlots|stem|ba19e766bdb0232e|255f5b95616fdc92|c7716ce86694cec0|-1533597732||t19298.7472118875s|2e1a108e1d42fdea|5392934|rds|local|vector|||0.25||
 estimated_segment_speeds|function|8552283f04a8e578|||||||||||||||
 filter_far_uta_stops|function|84e93fc220bab7cd|||||||||||||||
 filter_lines|function|7bd79cde3329e2bf|||||||||||||||
 first_last_dir|function|58e0b871ea354d4c|||||||||||||||
 fix_clean_uta_points|function|d69e469881a5215e|||||||||||||||
 fix_transit_lines|function|825a8c5f5595d172|||||||||||||||
-g_aveScatterPlots|stem|b225532e6891ac10|bff44d3370df4e05|011c901e57404835|1416807310||t19283.7897652021s|181551e6fbf136f8|8457279|rds|local|vector|||0.47|guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.|
-g_descLineGraphs|stem|7dc420c01c671879|ce0b05e8b52275bd|461fcba7aaf35dd3|642740888||t19283.7897405803s|64bf602238b112bb|8413858|rds|local|vector|||0.45||
-g_descScatterPlots|stem|664f04d8aa4d5ea0|b804bb69f3bea28e|d684e85bb9414175|449804476||t19283.7897166671s|82735145359fbec8|8448076|rds|local|vector|||0.44|1m22mas.tibble was deprecated in tibble 2.0.0.36mℹ39m Please use as_tibble instead.36mℹ39m The signature and semantics have changed, see as_tibble.|
-g_errScatterPlots|stem|62bdb9ee84279b98|8bf823da7d5a3e9a|2d4b15b467c66f2a|631905185||t19283.7897872053s|5a0610146a828183|8565547|rds|local|vector|||0.25||
+g_aveScatterPlots|stem|b225532e6891ac10|bff44d3370df4e05|45360ee2f60e3fa4|1416807310||t19298.7472561265s|181551e6fbf136f8|8457279|rds|local|vector|||0.39|guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.. guidesscale  FALSE is deprecated. Please use guidesscale  none instead.|
+g_aveScatterPlots2|stem|5d91aa673cb24d3c|707e83bfbebe96e7|5bd5aba99ff5b84d|299011441||t19298.7105183667s||8432760|rds|local|vector|||0.11||1m22mProblem while computing max  maxObserved, Modeled.36mℹ39m The error occurred in group 1 MODE_Name  4Local Bus.1mCaused by error in maskeval_all_summarise22m33m39m object Observed not found
+g_descLineGraphs|stem|7dc420c01c671879|ce0b05e8b52275bd|118c40df94342b7a|642740888||t19298.7104961404s|64bf602238b112bb|8413858|rds|local|vector|||0.25||
+g_descLineGraphs2|stem|b45402e7f00e405e|d5ecbf32489399fd|5d5de8937f4c9c22|-1965173520||t19298.7105855004s|8fff7f6e0b2d3c8e|8189228|rds|local|vector|||0.29||
+g_descScatterPlots|stem|664f04d8aa4d5ea0|b804bb69f3bea28e|8637ba07c5c74082|449804476||t19298.7172469529s|82735145359fbec8|8448076|rds|local|vector|||0.5||
+g_descScatterPlots2|stem|6ca00957c9e2f402|b987250582210128|6eeb605b3c144325|665677191||t19298.7173106624s|c904431cb3d0f836|8219507|rds|local|vector|||0.27||
+g_errScatterPlots|stem|62bdb9ee84279b98|8bf823da7d5a3e9a|4eced3e76244dc41|631905185||t19298.7472334613s|5a0610146a828183|8565547|rds|local|vector|||0.2||
+g_errScatterPlots2|stem|d0fd1706568fa8b7|ed2dd213a08f8479|834ad3c0e6c6e75c|2007265158||t19298.7172904793s|456cfd8329524c85|8187617|rds|local|vector|||0.25||
 geosphere|stem|eac6d82de2b43642|c9b4b63c9649b0d0|e799ee53e9f39e65|-1606283801||t19282.7604091992s|f76e86d46917ffc0|4465956|rds|local|vector|||52.6||
 get_stop_locations|function|135d79b754f57fef|||||||||||||||
 get_tdm_segments|function|9fceafb4b8df08cc|||||||||||||||
+get_tdm_segments_2|function|a5e106ffea77e898|||||||||||||||
 get_transit_lines|function|379b09bd9cd8036f|||||||||||||||
 get_transit_nodes|function|911c43dccbf8c283|||||||||||||||
 get_uta_points|function|6e1a649b00cdc9d6|||||||||||||||
@@ -42,21 +49,30 @@ gtfs_gps|stem|e9739525de6971cf|4a96cffb67e52204|c30ecd37d0a861d7|38064797||t1928
 gtfs_gps_lines|stem|d0ffff591d4023ba|b98a4ab0a051ab53|047c3c59fc108c96|1234500311||t19282.6811834032s|76ce1c203bebe537|16052944|rds|local|vector|||50.54||
 gtfs_gps_points|stem|caa59e4421cd1400|3ac5a17e37b8c377|48757ae29da34c11|844197231||t19284.7007355752s|9ecedc29d81ef4a0|86004408|rds|local|vector|||10.31||
 gtfs_histo_df|stem|cecf82c788527405|8b4f5536029ca954|6171841d76c8fe2e|-158092253||t19283.7747962383s|78be93a51419081b|321281|rds|local|vector|||0.07||
+gtfs_histo_df_2|stem|ea3654cd3b90ac7d|88fbb8e613202534|fb1fd49d25f66e17|1964391300||t19297.6208173807s|c25631eef320e235|308013|rds|local|vector|||0.09||
 gtfs_path|stem|f4dee505c236f3b1|88c63489d19734a6|ef46db3751d8e999|-413164639||t19282.6720228778s|758d7d51407f572d|117|rds|local|vector|||0.02||
 gtfs_targets|object|5de9cbfba9b5bb2a|||||||||||||||
+gtfs_targets_2|object|9e446aed709c95de|||||||||||||||
 gtfs_tdm_routes|stem|2544bcb76ec0abdf|ba3905ecf84a09d8|1306dbebdfe23639|-2125660478||t19282.8204447214s|ae1ebd2adb9bf06a|4490788|rds|local|vector|||0.48||
 gtfs_visual_targets|object|ee881a051ec36795|||||||||||||||
+gtfs_visual_targets_2|object|1efa57709b1b164a|||||||||||||||
 join_estimated_speeds|function|7e64016a14c37998|||||||||||||||
 join_gtfs|function|cd065faa58fb2e0a|||||||||||||||
 join_gtfs_speeds|function|b73a79eb5901a6f5|||||||||||||||
+join_gtfs_speeds_2|function|fa94c12e2243b629|||||||||||||||
 join_tdm_gtfs|stem|001b40f51fc89f6d|1fa86dd19efba35c|985391a249565841|-146244603||t19282.9492512948s|65b25e81589f97c9|867681|rds|local|vector|||41.09||
+join_tdm_gtfs_2|stem|9ee05519dffce092|e7795b8cc3672587|3faf37dadbc84d9b|-574494363||t19297.5992894346s|cc96b80aedeaeb7e|913367|rds|local|vector|||40.78||
+join_to_gtfs|function|56b4ced618473bc3|||||||||||||||
 joint_estimated_speeds|stem|842b791845c4decc|4436edc79e0394d6|a93d09f4b11cb24c|982189788||t19283.7745523501s|1aa65f65a8c88b1a|699644|rds|local|vector|||0.06||
 joint_gtfs_speeds|stem|3abadd23fda7fb28|9f67da1be057e0e2|8764f016544228f9|968188390||t19283.7882775383s|bfc9bd5665d4e36d|1218691|rds|local|vector|||0.05||
+joint_gtfs_speeds_2|stem|ac33ba37e93bd773|dce3c26bb48b9ce1|9c0ebc5fd7cd4cf9|2103192085||t19297.6231087795s|60751b3806e670e6|1240635|rds|local|vector|||0.05||
 lineGraphs|stem|25abbb4a5838365f|01f49d89cfc20a9c|5790bdc4f2960a63|27300605||t19263.8960458345s|077fbd5ec235ae51|13740851|rds|local|vector|||0.75||
 linePlotter|function|4cded3eb14523a86|||||||||||||||
-listPlots|function|85cee541d2b7283a|||||||||||||||
+listPlots|function|47f65812e6dbbdec|||||||||||||||
+make_centerpoint|function|ea36b17bcb1aa8c9|||||||||||||||
 make_centroids|function|55729949656200f6|||||||||||||||
 make_histo_df|function|131308214f453571|||||||||||||||
+make_histo_df_2|function|a461ab84357af4bc|||||||||||||||
 makePNGs|function|39477afc848d24a5|||||||||||||||
 mapable_uta_points|function|98f9f353fb4ea8b2|||||||||||||||
 mapAveScatterPlots|function|c2feba22b80a35ba|||||||||||||||
@@ -64,16 +80,20 @@ mapDescLineGraphs|function|5b03d0b27de3e723|||||||||||||||
 mapDescScatterPlots|function|db66774e381ebb31|||||||||||||||
 mapErrScatterPlots|function|be7d2afeb1b6dca1|||||||||||||||
 mapLineGraphs|function|4ed4fff7f45adedf|||||||||||||||
-mapPlots|function|4a06398068031d07|||||||||||||||
+mapPlots|function|5600c8de987a9772|||||||||||||||
+mapPlots2|function|c61d20615d788f4c|||||||||||||||
 mapScatterPlots|function|00f94ad04cdf4dc3|||||||||||||||
 merge_tdm_lines|stem|66265b2a3fe5bd2b|beb7e21cd8395e6e|23fdcf63dc7a9f25|-1597834255||t19282.9545737425s|425e9dd37cdcaf66|969718|rds|local|vector|||0.28||
+merge_tdm_lines_2|stem|2cf799f6d4e53d88|3684969676716c09|488974525585c724|99015217||t19297.5992937453s|ad3f4d99699b587c|1014171|rds|local|vector|||0.11||
 merge_tdm_links|function|67124f64e3aab61d|||||||||||||||
 merge_trip_routes|function|c74be08a147ee690|||||||||||||||
 merge_uta_tdm|function|fa7d5bece0280546|||||||||||||||
 merge_utah_tdm|function|b7648b22dc462521|||||||||||||||
 mflines|stem|475081653fe25579|3a324741f3a5583c|a3dad144c40657ed|-377625815||t19282.6913263467s|1254f8a9a0ffbd1f|107|rds|local|vector|||0||
 mutate_joint_speeds|function|25b14d74e46c6dd5|||||||||||||||
+mutate_joint_speeds2|function|c10893709fb9bb94|||||||||||||||
 mutated_gtfs_speeds|stem|efab2444378a7199|2f2c6dd642d6fa06|22d7f0b84e339763|-275301145||t19283.7882848541s|bd537f181d37a76b|1318668|rds|local|vector|||0.34||
+mutated_gtfs_speeds_2|stem|5cff816078fabf58|94e22f9d0c48cf7c|a1e02debcada8cd3|1989562445||t19298.6983212548s|c0011a511511fb23|1283219|rds|local|vector|||0.25||
 mutated_joint_speeds|stem|ae1062a4fba4003a|eba9cc6578fed0d6|a77bf29ffefad8cf|195941012||t19283.7745580755s|6f1db8360e07fb60|790868|rds|local|vector|||0.28||
 ok_0_centroid_speeds|stem|0769b3d0cb4a5e9d|12887ccd3e00f63b|739340e8055a80ff|1574089844||t19282.8203906253s|ddde6dc0a67f1736|40153|rds|local|vector|||0.12||
 ok_0_centroid_speeds_summary|stem|6457d3662ac095b7|705db7dc428b998a|845da20b78966cd4|129298050||t19282.8204011499s|a6f9ed2597c6ecfa|43825|rds|local|vector|||0.16||
@@ -104,6 +124,7 @@ pngLineGraphs|function|7a7003b3cff843ce|||||||||||||||
 pngLingGraphs|function|7a7003b3cff843ce|||||||||||||||
 route_direction_summary|function|b8deb145f6fdaa88|||||||||||||||
 routeplots|stem|255624ed1167980f|37ee5f4949af3c94|800f1742229561f5|-1560327291||t19283.776526489s|2a12d098910d7d20|2820496|rds|local|vector|||3.18||
+routeplots_2|stem|0ae9d6d03520dcc0|8fb14c14a8874f44|0dd0163997708b1a|-1553068520||t19297.6216158931s|99b8884c14734f44|2759684|rds|local|vector|||3.15||
 routes|stem|8ff433d84539bb23|a3dd85cd8ef0f7e2|25406407f9051bee|541301545||t19282.6913399668s|e8f57a5ec04ef066|2204|rds|local|vector|||0||
 scatterPlots|stem|cf806ef68f0fc185|9eb59bc34a7776df|c94057d336dc0c13|1338864008||t19263.8960012174s|a571576281ffe41f|13855475|rds|local|vector|||0.77|as.tibble was deprecated in tibble 2.0.0.Please use as_tibble instead.The signature and semantics have changed, see as_tibble.|
 scatterPlotter|function|df5959fbacad7527|||||||||||||||
@@ -115,11 +136,17 @@ summarize_speeds|function|cde14385d033db16|||||||||||||||
 tdm_centroids|stem|0a153cd9833d2a78|d29be7c0d010cdd3|e8a360a23a9579d4|-897478575||t19282.8197861179s|678b8bc4420899f9|901433|rds|local|vector|||0.11|1m22mas.tibble was deprecated in tibble 2.0.0.36mℹ39m Please use as_tibble instead.36mℹ39m The signature and semantics have changed, see as_tibble.|
 tdm_centroids_clean|stem|6f66beadb3f487a4|872fd3812f50e073|7bde4be8b68ef19b|1950467381||t19282.8198849695s|7b43443dd46883ea|167488|rds|local|vector|||0||
 tdm_centroids_clean2|stem|e9016849afc39f84|286398c22b189c62|ff4bf6c48fe4e746|1782628471||t19282.9487625787s|505d3180c9415e3b|254342|rds|local|vector|||0.12||
+tdm_centroids_clean2_2|stem|b216c2bb7f10a4f6|5f937bba7f6b02d9|fb290c0b7d22306f|-143119941||t19297.595216078s|2fd53317143fce2f|277831|rds|local|vector|||0.13||
 tdm_centroids_compass|stem|407c95fa14ecc773|5bfff8d9b55f7c22|0d1e15217889f7b1|-1231975213||t19282.8747755556s|738791c06b8f2220|946093|rds|local|vector|||0.26|1m22mas.tibble was deprecated in tibble 2.0.0.36mℹ39m Please use as_tibble instead.36mℹ39m The signature and semantics have changed, see as_tibble.|
+tdm_centroids_compass_2|stem|fb29f98a8ae01951|7c3d9ae1dfc89f6e|cdc75fbcd393c9c3|708233466||t19297.5928768265s|16179991f9911927|991568|rds|local|vector|||0.29|1m22mas.tibble was deprecated in tibble 2.0.0.36mℹ39m Please use as_tibble instead.36mℹ39m The signature and semantics have changed, see as_tibble.|
 tdm_data|stem|0a1f6f5aca26fd95|9cfd4d293234adcc|0e60e5d2cf3dd66f|1035583359||t19282.8181453452s|495cdec17a48b5cf|787691|rds|local|vector|||0.27||
-tdm_lines_compass|stem|4b641cdbe0ab4ee1|d0995e258f9e6ab4|3f1a9f845bd55fb5|367305292||t19282.8747697023s|dd47503deff7ad40|979076|rds|local|vector|||2.79||
+tdm_data_2|stem|312604297d702902|e20be8e3968364a9|0e60e5d2cf3dd66f|441331737||t19296.9632269289s|c359d04d5f98e882|803289|rds|local|vector|||0.3||
+tdm_lines_compass|stem|4b641cdbe0ab4ee1|d0995e258f9e6ab4|6a4e659966a0a955|367305292||t19296.9800129139s|dd47503deff7ad40|979076|rds|local|vector|||2.76||
+tdm_lines_compass_2|stem|a3c5636a515d6444|ebee7bfe349c048b|40cb5135c372c1b9|-1722192063||t19297.5928707126s|381389281bac5688|1025625|rds|local|vector|||2.64||
 tdm_segments|stem|849792433ab253e0|fcb6739789d0c91b|02b840a55e02a090|1760314838||t19268.8854660571s|4b9be6c5bd5d83cf|1135161|rds|local|vector|||6.84||
+tdm_segments_2|stem|782aa9641266266b|8caa48c802409634|dc4a2e1e0bd9fb21|-1263863544||t19297.5928304074s|3664306e66b1445f|988252|rds|local|vector|||3.72||
 tdm_transit_lines|stem|649d4bf83aaa0052|e3199948d66162c9|9f73cf54f1a52975|664880761||t19282.8181564322s|951d195cce2452e7|926562|rds|local|vector|||0.06||
+tdm_transit_lines_2|stem|4f3f767ef43eebbe|54bdd8a3888d70a1|61c6ec9179ca2a5a|1564284474||t19297.5928370086s|391179de0ba7c22b|969639|rds|local|vector|||0.26||
 tdm_transit_lines_fixed|stem|d32759344e9ffb13|4edd63186a22d4cb|0d8fe4f87e974695|-311725359||t19282.8197808654s|55956f61607c2bae|931790|rds|local|vector|||0.18||
 tdm_transit_nodes|stem|6b75de1d09c98636|22c40e8dca6ae29a|4dd31a5700e13716|1645333439||t19282.8197930029s|533781fc1c85aa69|1174138|rds|local|vector|||0.27|repeating attributes for all subgeometries for which they may not be constant|
 tdm_uta_conversion|stem|0a1747df529d0848|6389d46f931562d8|8f4965d6a3fde399|395856135||t19282.8181367924s|528661503af5cbbd|1121|rds|local|vector|||0.78||

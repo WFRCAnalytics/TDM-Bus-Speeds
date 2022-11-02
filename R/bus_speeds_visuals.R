@@ -70,10 +70,12 @@ mapPlots <- function(jointspeeds,ft_group,func){
   fttypes <- list()
   if(ft_group == "FT"){
     fttypes <- list(1,2,3,4,5,14,15,30,31,33,34,35,36,38,39,41,42)
-  } else {
+  } else if(ft_group == "FTG2"){
+    fttypes <- list(1,2,3,4,5,6)
+  } else{
     fttypes <- list(1,2,3,4,30,40)
   }
-  
+
   ftplots <- list()
   for (f in 1:length(fttypes)){
     ftplots[[f]] = func(jointspeeds,ft_group,fttypes[[f]])
@@ -95,6 +97,9 @@ listPlots <- function(ftplots, ft_group){
          "31_FT_2019" = ftplots[[9]], "33_FT_2019" = ftplots[[10]], "34_FT_2019" = ftplots[[11]],
          "35_FT_2019" = ftplots[[12]], "36_FT_2019" = ftplots[[13]], "38_FT_2019" = ftplots[[14]],
          "39_FT_2019" = ftplots[[15]], "41_FT_2019" = ftplots[[16]], "42_FT_2019" = ftplots[[17]])
+  } else if (ft_group == "FTG2"){
+    list("1_FT_2019" = ftplots[[1]], "2_FT_2019" = ftplots[[2]], "3_FT_2019" = ftplots[[3]],
+         "4_FT_2019" = ftplots[[4]], "5_FT_2019" = ftplots[[5]], "6_FT_2019" = ftplots[[6]])
   } else{
     list("1_FT_2019" = ftplots[[1]], "2_FT_2019" = ftplots[[2]], "3_FT_2019" = ftplots[[3]],
          "4_FT_2019" = ftplots[[4]], "30_FT_2019" = ftplots[[5]], "40_FT_2019" = ftplots[[6]])
@@ -109,6 +114,13 @@ descLinePlotter <- function(jointspeeds, ft_group, FTNUM){
       select(link_id,link_seq,FT_2019,FT_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
       pivot_longer(!c(link_id,FT_2019,FT_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
       arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+  } else if(ft_group == "FTG2"){
+    jointspeeds %>% 
+      filter(FTG2 == FTNUM) %>% as.tibble()  %>%
+      select(link_id,link_seq,FTG2,FTG_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
+      pivot_longer(!c(link_id,FTG2,FTG_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
+      arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+    
   } else{
     jointspeeds %>% 
       filter(FTG_2019 == FTNUM) %>% as.tibble()  %>%
@@ -119,6 +131,8 @@ descLinePlotter <- function(jointspeeds, ft_group, FTNUM){
   
   ftTitle <- if(ft_group == "FT"){
     jointspeeds2$FT_Name[1]
+  } else if(ft_group == "FTG2"){
+    jointspeeds2$FTG_Name[1]
   } else{
     jointspeeds2$FTG_Name[1]
   }
@@ -144,6 +158,13 @@ descScatterPlotter <- function(jointspeeds,ft_group,FTNUM){
       select(link_id,link_seq,FT_2019,FT_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
       pivot_longer(!c(link_id,FT_2019,FT_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
       arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+  } else if(ft_group == "FTG2"){
+    jointspeeds %>% 
+      filter(FTG2 == FTNUM) %>% as.tibble()  %>%
+      select(link_id,link_seq,FTG2,FTG_Name,MODE,MODE_Name,Observed,Modeled)  %>% 
+      pivot_longer(!c(link_id,FTG2,FTG_Name,MODE,MODE_Name,link_seq),names_to = "Type",values_to = "Speed") %>%
+      arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+    
   } else{
     jointspeeds %>% 
       filter(FTG_2019 == FTNUM) %>% as.tibble()  %>%
@@ -154,6 +175,8 @@ descScatterPlotter <- function(jointspeeds,ft_group,FTNUM){
   
   ftTitle <- if(ft_group == "FT"){
     jointspeeds2$FT_Name[1]
+  } else if(ft_group == "FTG2"){
+    jointspeeds2$FTG_Name[1]
   } else{
    jointspeeds2$FTG_Name[1]
   }  
@@ -227,7 +250,7 @@ errorScatterPlotter <- function(jointspeeds,ft_group,FTNUM){
     jointspeeds %>% 
       filter(FT_2019 == FTNUM) %>% as.tibble()  %>%
       select(link_id,link_seq,FT_2019,FT_Name,FTG_Name,MODE,MODE_Name,Observed,Modeled,PercentError)
-  } else {
+  }else {
     jointspeeds %>% 
       filter(FTG_2019 == FTNUM) %>% as.tibble()  %>%
       select(link_id,link_seq,FTG_2019,FT_Name,FTG_Name,MODE,MODE_Name,Observed,Modeled,PercentError)

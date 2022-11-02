@@ -124,6 +124,7 @@ st_make_segments <- function(uta_gps_lines_df){
 calculate_tdm_compass <- function(tdm_transit_lines){
   tdm_transit_lines2 <- tdm_transit_lines %>%
     filter(!is.na(AREATYPE)) %>%
+    st_set_crs(26912) %>%
     st_transform(4326)
   tdm_transit_lines2$orient = orient(tdm_transit_lines2)
   
@@ -267,6 +268,22 @@ make_histo_df <- function(joint_gtfs_lines){
     arrange(LabelNum,LINKSEQ1)
 }
 
+make_histo_df_2 <- function(joint_gtfs_lines){
+  joint_gtfs_lines %>%
+    mutate(Modeled = ifelse(PkOk == "pk", AM_SPD, MD_SPD),
+           Observed = as.numeric(aveSpeed)*0.621371) %>%
+    as_tibble() %>%
+    mutate(dif = Observed - Modeled) %>%
+    select(LabelNum,Label,LINKSEQ1,PkOk,dif,dist,MODE,FT,AREATYPE,Observed,Modeled) %>%
+    pivot_longer(!c(LabelNum,Label,LINKSEQ1,PkOk,dif,dist,MODE,FT,AREATYPE), names_to = "Type", values_to = "Speed") %>%
+    mutate(filterout = ifelse(Type == "Modeled", FALSE, 
+                              ifelse(dif > 30 & Speed > 50, TRUE, FALSE))) %>%
+    mutate(filterout = ifelse(Type == "Observed" & dist > 3000, TRUE, filterout)) %>%
+    filter(filterout == FALSE) %>%
+    group_by(LabelNum,Label,PkOk,Type) %>%
+    arrange(LabelNum,LINKSEQ1)
+}
+
 plot_routes <- function(histo){
   routeplots <- list()
   for (i in 1:109){
@@ -313,8 +330,16 @@ join_gtfs_speeds <- function(joint_gtfs_lines){
     filter(filterout == FALSE)
 }
 
-
-
+join_gtfs_speeds_2 <- function(joint_gtfs_lines){
+  joint_gtfs_lines %>%
+    mutate(Modeled = ifelse(PkOk == "pk", AM_SPD, MD_SPD),
+           Observed = as.numeric(aveSpeed)*0.621371) %>%
+    mutate(PercentError = (Observed - Modeled)/Modeled) %>%  
+    mutate(dif = Observed - Modeled) %>%
+    mutate(filterout = ifelse(dif > 30 & Observed > 50, TRUE, 
+                              ifelse(dist > 3000, TRUE, FALSE))) %>%
+    filter(filterout == FALSE)
+}
 
 
 ### GLOBAL FUNCTIONS ###
@@ -329,5 +354,72 @@ orient <- function(lines){
   bearing    
 }
 
-
+### Other functions to use later?
+mutate_joint_speeds2 <- function(joint_speeds, ft_grouping_col){
+  joint_speeds %>%
+    mutate(
+      MODE_Name = case_when(
+        MODE == 4 ~ "4-Local Bus",
+        MODE == 5 ~ "5-Core Bus",
+        MODE == 6 ~ "6-Express Bus",
+        MODE == 7 ~ "7-Light Rail",
+        MODE == 8 ~ "8-Commuter Rail",
+        MODE == 9 ~ "9-BRT",
+        TRUE ~ "None"
+      ),
+      FTG2 = case_when(
+        FT %in% c(1,4:10) ~ 1,       # collectors & locals
+        FT == 3 ~  2,                # minor arterials
+        FT == 2 ~ 3,                 # principal arterials
+        FT %in% c(11:19) ~ 4,        # expressways
+        FT %in% c(20:26,30:40) ~ 5,  # freeways
+        FT %in% c(28:29,41:42) ~ 6,  # ramps
+        TRUE ~ 0 
+      )) %>%
+    mutate(
+      FTG_Name= case_when(
+        FTG2 == 1 ~ "1-Collectors & Locals",
+        FTG2 == 2 ~ "2-Minor Arterials",
+        FTG2 == 3 ~ "3-Principal Arterials",
+        FTG2 == 4 ~ "4-Expressways",
+        FTG2 == 5 ~ "5-Freeways",
+        FTG2 == 6 ~ "6-Ramps",
+        TRUE ~ "None"
+      )
+    ) %>%
+    filter(FTG2 != 0) %>%
+    group_by({{ft_grouping_col}}, MODE) %>%
+    arrange(-Modeled) %>%
+    mutate(link_seq = row_number())
+}
+mapPlots2 <- function(jointspeeds,func){
+  ftplots <- list()
+  for (f in 1:5){
+    ftplots[[f]] = func(jointspeeds,f)
+  }
+  list("1-Collectors&Locals" = ftplots[[1]], "2-MinorArterials" = ftplots[[2]], "3-PrincipalArterials" = ftplots[[3]],
+       "4-Expressways" = ftplots[[4]], "5-Freeways" = ftplots[[5]])
+}
+descLinePlotter2 <- function(jointspeeds){
+  jointspeeds2 <- mutated_gtfs_speeds_2  %>% 
+    filter(FTG == 2) %>% 
+    as.tibble()  %>%
+    select(link_id,link_seq,FTG,FTGCLASS,AREATYPE,Observed,Modeled)  %>% 
+    pivot_longer(!c(link_id,FTG,FTGCLASS,AREATYPE,link_seq),names_to = "Type",values_to = "Speed") %>%
+    arrange(link_seq) %>%  mutate(Type = factor(Type, levels = c("Observed","Modeled")))
+  
+  #ftTitle <- jointspeeds2$FTGCLASS[1]
+  
+  ggplot(jointspeeds2, aes(x = link_seq, y = Speed, fill = Type))+
+    facet_wrap(~AREATYPE, nrow = 1, scales = "free") +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+    geom_col(alpha = .25, position = "dodge2")+     
+    geom_line(aes(x = link_seq,y = Speed, colour = Type))+
+    scale_color_manual(values = c("red", "blue")) +
+    scale_fill_manual(values = c("red", "blue")) +
+    xlab("Links by Descending Modeled Speed") + ylab("Speed (mph)") +
+    #ggtitle(paste0("Bus Speeds Comparison for '",ftTitle, "' by Mode")) +
+    theme()+
+    theme_bw()
+}
       
