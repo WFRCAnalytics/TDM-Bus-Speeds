@@ -270,7 +270,7 @@ make_histo_df <- function(joint_gtfs_lines){
 
 make_histo_df_2 <- function(joint_gtfs_lines){
   joint_gtfs_lines %>%
-    mutate(Modeled = ifelse(PkOk == "pk", AM_SPD, MD_SPD),
+    mutate(Modeled = ifelse(PkOk == "pk", P_SPEED1, O_SPEED1),
            Observed = as.numeric(aveSpeed)*0.621371) %>%
     as_tibble() %>%
     mutate(dif = Observed - Modeled) %>%
@@ -332,7 +332,7 @@ join_gtfs_speeds <- function(joint_gtfs_lines){
 
 join_gtfs_speeds_2 <- function(joint_gtfs_lines){
   joint_gtfs_lines %>%
-    mutate(Modeled = ifelse(PkOk == "pk", AM_SPD, MD_SPD),
+    mutate(Modeled = ifelse(PkOk == "pk", P_SPEED1, O_SPEED1),
            Observed = as.numeric(aveSpeed)*0.621371) %>%
     mutate(PercentError = (Observed - Modeled)/Modeled) %>%  
     mutate(dif = Observed - Modeled) %>%

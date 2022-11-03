@@ -227,8 +227,8 @@ tar_plan(
   gtfs_visual_targets_2
   
 )
-#g_descLineGraphs2 <- tar_read(g_descLineGraphs2)
-#makePNGs(g_descLineGraphs2, "outputs/DescendingSpeeds_Exact")
-#g_descScatterPlots2 <- tar_read(g_descScatterPlots2)
-#makePNGs(g_descScatterPlots2, "outputs/DescendingSpeeds_Average")
+g_descLineGraphs2 <- tar_read(g_descLineGraphs2)
+makePNGs(g_descLineGraphs2, "outputs/DescendingSpeeds_Exact")
+g_descScatterPlots2 <- tar_read(g_descScatterPlots2)
+makePNGs(g_descScatterPlots2, "outputs/DescendingSpeeds_Average")
 
