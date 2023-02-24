@@ -4,7 +4,7 @@ output: html_document
 author: Chris Day
 date: '2022-10-12'
 ---
-# r is the best {.tabset}
+# {.tabset}
 
 ```{r libraries, warning=FALSE, message=FALSE}
 library(tidyverse)

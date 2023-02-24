@@ -43,7 +43,7 @@ Four main inputs are used to complete the analysis, estimation, and validation i
 
 ```{r inputs, message = FALSE, warning = FALSE}
 tdmshpfile <- "data/TDM/Distrib_Network/Distrib_Network__Summary.shp"
-transit_line_file <- "data/TDM/Distrib_Network/_v832_SE19_Net19_2_OD_Station_Detail.dbf"
+transit_line_file <- "data/TDM/Distrib_Network/_v832_SE19_Net19_2_OD_Station_Detail2.dbf"
 gtfs_summary_data <- tar_read(speed_sums)
 tdm_uta_conversion <- tar_read(tdm_uta_conversion)
 ```
@@ -769,7 +769,7 @@ ratios4graphCheck <- ggplot(ratioTable4) +
 ratios4graphCheck
 ```
 
-### Step Six -- Final Ratios
+### Step Six -- Manually Smooth Lines Again
 In this last step, we make just a few adjustments to the mathematically smooth line ratios, to ensure a coherent slope/change between area types of the same functional groupings. These changes are made below, and represent the final ratios to be used.
 
 ```{r, message = FALSE, warning = FALSE, include = FALSE}
@@ -801,6 +801,104 @@ ratios5graph
 ```
 
 
+### Step Seven -- Final Ratios
+```{r ratios7, include = FALSE, warning= FALSE, message = FALSE}
+ratioTable6 <- ratioTable5 %>%
+  mutate(Ratio6 = case_when(
+    # fix collectors/locals for all time periods
+    ftat == 111 ~ .58,
+    ftat == 112 ~ .6,
+    ftat == 113 ~ .62,
+    ftat == 114 ~ .64,
+    ftat == 115 ~ .53,
+    ftat == 211 ~ .58,
+    ftat == 212 ~ .6,
+    ftat == 213 ~ .62,
+    ftat == 214 ~ .64,
+    ftat == 215 ~ .52,
+    ftat == 311 ~ .56,
+    ftat == 312 ~ .59,
+    ftat == 313 ~ .63,
+    ftat == 314 ~ .66,
+    ftat == 315 ~ .57,
+    # fix minor arterials for all time periods
+    ftat == 121 ~ .8,
+    ftat == 122 ~ .72,
+    ftat == 123 ~ .64,
+    ftat == 124 ~ .58,
+    ftat == 125 ~ .51,
+    ftat == 221 ~ .75,
+    ftat == 222 ~ .68,
+    ftat == 223 ~ .61,
+    ftat == 224 ~ .55,
+    ftat == 225 ~ .48,
+    ftat == 321 ~ .82,
+    ftat == 322 ~ .74,
+    ftat == 323 ~ .66,
+    ftat == 324 ~ .6,
+    ftat == 325 ~ .53,
+    # fix major arterials for all time periods
+    ftat == 131 ~ .85,
+    ftat == 132 ~ .75,
+    ftat == 133 ~ .65,
+    ftat == 134 ~ .56,
+    ftat == 135 ~ .49,
+    ftat == 231 ~ .79,
+    ftat == 232 ~ .7,
+    ftat == 233 ~ .61,
+    ftat == 234 ~ .53,
+    ftat == 235 ~ .45,
+    ftat == 331 ~ .91,
+    ftat == 332 ~ .78,
+    ftat == 333 ~ .67,
+    ftat == 334 ~ .58,
+    ftat == 335 ~ .5,
+    # fix expressways for all time periods
+    ftat == 141 ~ .53,
+    ftat == 142 ~ .54,
+    ftat == 143 ~ .56,
+    ftat == 144 ~ .58,
+    ftat == 145 ~ .59,
+    ftat == 241 ~ .54,
+    ftat == 242 ~ .55,
+    ftat == 243 ~ .56,
+    ftat == 244 ~ .57,
+    ftat == 245 ~ .58,
+    ftat == 341 ~ .52,
+    ftat == 342 ~ .54,
+    ftat == 343 ~ .56,
+    ftat == 344 ~ .58,
+    ftat == 345 ~ .6,
+    # fix freeways for all time periods
+    ftat == 151 ~ .62,
+    ftat == 152 ~ .64,
+    ftat == 153 ~ .69,
+    ftat == 154 ~ .76,
+    ftat == 155 ~ .84,
+    ftat == 251 ~ .47,
+    ftat == 252 ~ .48,
+    ftat == 253 ~ .5,
+    ftat == 254 ~ .55,
+    ftat == 255 ~ .63,
+    ftat == 351 ~ .61,
+    ftat == 352 ~ .64,
+    ftat == 353 ~ .71,
+    ftat == 354 ~ .79,
+    ftat == 355 ~ .87,
+    TRUE ~ Ratio5
+  ))
+```
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+ratios6graph <- ggplot(ratioTable6) +
+  aes(x = AreaType, y = Ratio6, color = FTGROUP) +
+  facet_wrap(~PkOk)+
+  geom_point(size = 2)+ 
+  scale_y_continuous( limits = c(0,1), expand = c(0,0) ) +
+  theme_bw() + 
+  geom_line()
+ratios6graph
+```
 
 
 ### Progress
@@ -825,8 +923,8 @@ Lets make a GIF of the progress we made!
 Now that we have mathematically smoothed the data, lets take a look at the final output table. 
 
 ```{r finaltables, echo = FALSE, message = FALSE, warning = FALSE}
-r_table4 <- ratioTable5 %>%
-  pivot_wider(c(FTGROUP,PkOk),names_from = AreaType, values_from= Ratio5)
+r_table4 <- ratioTable6 %>%
+  pivot_wider(c(FTGROUP,PkOk),names_from = AreaType, values_from= Ratio6)
 
 groups_d4 <- r_table4 %>%
   filter(PkOk == "Average") %>% select(-PkOk)
